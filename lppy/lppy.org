@@ -1040,7 +1040,7 @@ Solving linear equations
    #+RESULTS:
    : The exit concentration is 0.01 mol/L
 
-   #+begin_src python :results link :file images/odefitting.png :export both
+   #+begin_src python :results link :file images/odefitting.png :exports both
      import numpy as np
      from scipy.optimize import curve_fit
      from scipy.integrate import odeint
