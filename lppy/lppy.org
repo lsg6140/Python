@@ -1070,3 +1070,32 @@ Solving linear equations
    #+RESULTS:
    [[file:images/odefitting.png]]
  
+   #+begin_src python :results graphics :file images/odefitting.png :exports both
+     import numpy as np
+     from scipy.optimize import curve_fit
+     from scipy.integrate import odeint
+     import matplotlib.pyplot as plt
+
+     tspan = [0,0.1,0.2,0.4,0.8,1]
+     Ca_data = [2.0081,  1.5512,  1.1903,  0.7160,  0.2562,  0.1495]
+
+     def fitfunc(t,k):
+         def myode(Ca,t):
+             return -k*Ca
+         Ca0 = Ca_data[0]
+         Casol = odeint(myode,Ca0,t)
+         return Casol[:,0]
+
+     k_fit, kcov = curve_fit(fitfunc, tspan, Ca_data, p0=1.3)
+
+     tfit = np.linspace(0,1)
+     fit = fitfunc(tfit,k_fit)
+
+     plt.plot(tspan,Ca_data,'ro',label='data')
+     plt.plot(tfit,fit,'b-',label='fit')
+     plt.legend(loc='best')
+     plt.savefig('images/odefitting.png')
+   #+end_src
+
+   #+RESULTS:
+   [[file:images/odefitting.png]]
