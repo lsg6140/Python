@@ -751,7 +751,7 @@ Solving linear equations
   B = np.array([[1,-1,1],
                 [0,10,25],
                 [0,20,50]])
-  u,s,v = np.linalg.svd(A)
+  u,s,v = np.linalg.svd(B)
   print('Singular values: {0}'.format(s))
   print('# of independent rows: {0}'.format(np.sum(np.abs(s)>tol)))
 #+end_src
@@ -763,5 +763,310 @@ Solving linear equations
 : [ True  True  True]
 : Singular values: [27.63016717 21.49453733  1.5996022 ]
 : # of independent rows: 3
-: Singular values: [27.63016717 21.49453733  1.5996022 ]
-: # of independent rows: 3
+: Singular values: [60.21055203  1.63994657 -0.        ]
+: # of independent rows: 2
+
+#+begin_src python :results output
+  a = [1,2,3,4,5]
+  b = [3,6,8,9,10]
+
+  sum = 0
+  for x,y in zip(a,b):
+      sum += x*y
+  print(sum)
+
+  import numpy as np
+  import time
+  w = np.array([0.1,0.25,0.12,0.45,0.98,0.5,0.6,0.7])
+  x = np.array([9,7,11,12,8,5,10,25])
+  t0 = time.time()
+  y = np.sum(w*x**2)
+  print('time {0}'.format(time.time()-t0))
+  print(y)
+  t0 = time.time()
+  y = x@np.diag(w)@x
+  print('time {0}'.format(time.time()-t0))
+  print(y)
+#+end_src
+
+#+RESULTS:
+: 125
+: time 4.601478576660156e-05
+: 672.39
+: time 5.14984130859375e-05
+: 672.39
+
+#+begin_src python :results output
+  import numpy as np
+  v1 = [6,0,3,1,4,2]
+  v2 = [0,-1,2,7,0,5]
+  v3 = [12,3,0,-19,8,-11]
+
+  A = np.row_stack([v1,v2,v3])
+  print(A)
+
+  eps = np.finfo(np.linalg.norm(A).dtype).eps
+  tol = max(eps*np.array(A.shape))
+
+  print(eps,tol)
+
+  u,s,v = np.linalg.svd(A)
+  print(s)
+  print(np.sum(s>tol))
+  tol2 = 1e-14
+  print(np.sum(s>tol2))
+
+  A = np.column_stack([v1,v2])
+  x = np.linalg.lstsq(A,v3)
+  print(x[0])
+#+end_src
+
+#+RESULTS:
+: [[  6   0   3   1   4   2]
+:  [  0  -1   2   7   0   5]
+:  [ 12   3   0 -19   8 -11]]
+: 2.220446049250313e-16 1.3322676295501878e-15
+: [2.75209239e+01 9.30584482e+00 1.42425400e-15]
+: 3
+: 2
+: [ 2. -3.]
+#+begin_src python :results output
+  import numpy as np
+
+  A = [[1,2,3],
+       [0,2,3],
+       [0,0,1e-6]]
+
+  u,s,v = np.linalg.svd(A)
+  print(s)
+  print(np.sum(np.abs(s)>1e-15))
+  print(np.sum(np.abs(s)>1e-5))
+#+end_src
+
+#+RESULTS:
+: [5.14874857e+00 7.00277208e-01 5.54700196e-07]
+: 3
+: 2
+
+** Chemical reaction
+   #+begin_src python :results output
+     import numpy as np
+
+     M = [[-1,0,-1,0,2],
+          [0,0,-1,2,0],
+          [-1,1,0,-1,1],
+          [0,-1,-1,1,1],
+          [1,-1,0,1,-1],
+          [0,0,1,-2,0]]
+
+     u,s,v = np.linalg.svd(M)
+     print(s)
+     print(np.sum(np.abs(s) > 1e-15))
+
+     import sympy
+     M = sympy.Matrix(M)
+     reduced_form, inds = M.rref()
+     print(reduced_form)
+     Mr = np.array(reduced_form)
+     print(Mr)
+     print(inds)
+
+     labels = ['H2', 'H', 'Br2', 'Br', 'HBr']
+     for row in reduced_form.tolist():
+         s = '0 = '
+         for nu,species in zip(row,labels):
+             if nu != 0:
+                 s += ' {0:+d}{1}'.format(int(nu), species)
+         if s != '0 = ':
+             print(s)
+   #+end_src
+
+   #+RESULTS:
+   #+begin_example
+   [3.84742803e+00 3.32555975e+00 1.46217301e+00 1.03409112e-16
+    0.00000000e+00]
+   3
+   Matrix([[1, 0, 0, 2, -2], [0, 1, 0, 1, -1], [0, 0, 1, -2, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
+   [[1 0 0 2 -2]
+    [0 1 0 1 -1]
+    [0 0 1 -2 0]
+    [0 0 0 0 0]
+    [0 0 0 0 0]
+    [0 0 0 0 0]]
+   (0, 1, 2)
+   0 =  +1H2 +2Br -2HBr
+   0 =  +1H +1Br -1HBr
+   0 =  +1Br2 -2Br
+   #+end_example
+
+   #+begin_src python :results output
+     import numpy as np
+     from scipy.linalg import lu
+
+     A = np.array([[6,2,3],
+                   [1,1,1],
+                   [0,4,9]])
+     B = [[6,2,3],
+          [1,1,1],
+          [0,4,9]]
+
+     p,l,u = lu(A)
+     p2,l2,u2 = lu(B)
+
+     print(p)
+     print(np.diag(p))
+     print(len(np.diag(p)))
+     nswaps = len(np.diag(p)) - np.sum(np.diag(p)) -1
+     detP = (-1)**nswaps
+     detL = np.prod(np.diag(l))
+     detU = np.prod(np.diag(u))
+
+     print(detP*detL*detU)
+     print(np.linalg.det(A))
+
+   #+end_src
+
+   #+RESULTS:
+   : [[1. 0. 0.]
+   :  [0. 0. 1.]
+   :  [0. 1. 0.]]
+   : [1. 0. 0.]
+   : 3
+   : 24.0
+   : 23.999999999999993
+
+   #+begin_src python :results output
+     import scipy.linalg.lapack as la
+     import numpy as np
+
+     n = 10000
+     A = np.random.rand(n,n)
+     Ab = np.zeros((n+1,n),dtype=np.complex)
+     kl,ku = n-1,n-1
+
+     for j in range(1,n+1):
+         for i in range(max(1,j-ku),min(n,j+kl)+1):
+             Ab[kl+ku+1+i-j-1,j-1]=A[i-1,j-1]
+
+     b = np.random.rand(n,1)
+     import time
+     t0 = time.time()
+     lub,piv,x,info = la.flapack.zgbsv(n,kl,ku,Ab,b)
+     print("time for lapack is {0}".format(time.time()-t0))
+
+     print(x)
+
+     t0 = time.time()
+     c = np.linalg.solve(A,b)
+     print('built in solver time is {0}'.format(time.time()-t0))
+     print(c)
+   #+end_src
+
+   #+RESULTS:
+
+   #+begin_src python :results link :file images/nonlinear.png :session nl
+     import numpy as np
+     from scipy.integrate import odeint
+     import matplotlib.pyplot as plt
+
+     m = 1.0
+     L = m**3/1000.0
+     mol = 1.0
+     s = 1.0
+
+     Cao = 2.0*mol/L
+     V = 10.0*L
+     nu = 0.5*L/s
+     k = 0.23*L/mol/s
+
+     def func(Ca):
+         return V-nu*(Cao-Ca)/(k*Ca**2)
+
+     c = np.linspace(0.001,2)*mol/L
+     plt.clf()
+     plt.plot(c,func(c))
+     plt.ylim([-0.1,0.1])
+     plt.savefig('images/nonlinear.png')
+   #+end_src
+
+   #+RESULTS:
+   [[file:images/nonlinear.png]]
+
+   #+begin_src python :results output :session nl
+     from scipy.optimize import fsolve
+
+     cguess = 500
+     c, = fsolve(func,cguess)
+     print(c)
+     print(func(c))
+     print(func(c)/(mol/L))
+   #+end_src
+
+   #+RESULTS:
+   : 559.5837456060607
+   : -1.734723475976807e-18
+   : -1.734723475976807e-21
+
+   #+begin_src python :results link :file images/integ.png :session nl
+     from scipy.integrate import quad
+
+     k = 0.23
+     nu = 10.0
+     Fao = 1.0
+
+     def integrand(Fa):
+         return -1.0/(k*Fa/nu)
+
+     def integ(Fa):
+         integral, err = quad(integrand,Fao,Fa)
+         return 100.0 - integral
+     vfunc = np.vectorize(integ)
+
+     f = np.linspace(0.01,1)
+     
+     plt.clf()
+     plt.plot(f,vfunc(f))
+     plt.savefig('images/integ.png')
+   #+end_src
+
+   #+RESULTS:
+   [[file:images/integ.png]]
+   #+begin_src python :results output :session nl
+     Fa_guess = 0.1
+     Fa_exit, = fsolve(vfunc,Fa_guess)
+     print('The exit concentration is {0:1.2f} mol/L'.format(Fa_exit/nu))
+   #+end_src
+
+   #+RESULTS:
+   : The exit concentration is 0.01 mol/L
+
+   #+begin_src python :results link :file images/odefitting.png :export both
+     import numpy as np
+     from scipy.optimize import curve_fit
+     from scipy.integrate import odeint
+     import matplotlib.pyplot as plt
+
+     tspan = [0,0.1,0.2,0.4,0.8,1]
+     Ca_data = [2.0081,  1.5512,  1.1903,  0.7160,  0.2562,  0.1495]
+
+     def fitfunc(t,k):
+         def myode(Ca,t):
+             return -k*Ca
+         Ca0 = Ca_data[0]
+         Casol = odeint(myode,Ca0,t)
+         return Casol[:,0]
+
+     k_fit, kcov = curve_fit(fitfunc, tspan, Ca_data, p0=1.3)
+
+     tfit = np.linspace(0,1)
+     fit = fitfunc(tfit,k_fit)
+
+     plt.plot(tspan,Ca_data,'ro',label='data')
+     plt.plot(tfit,fit,'b-',label='fit')
+     plt.legend(loc='best')
+     plt.savefig('images/odefitting.png')
+   #+end_src
+
+   #+RESULTS:
+   [[file:images/odefitting.png]]
+ 
