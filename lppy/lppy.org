@@ -1,0 +1,767 @@
+#+STARTUP: inlineimages
+* Virtual environment
+:PROPERTIES:
+:header-args: :results drawer
+:END:
+  #+begin_src bash :dir ~/dev/Python
+    virtualenv -p python3 lppy
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  Already using interpreter /usr/bin/python3
+  Using base prefix '/usr'
+  New python executable in /home/lsg/dev/Python/lppy/bin/python3
+  Also creating executable in /home/lsg/dev/Python/lppy/bin/python
+  Installing setuptools, pip, wheel...
+  done.
+  :end:
+
+  #+begin_src elisp :results silent
+    (pyvenv-activate "~/dev/Python/lppy")
+  #+end_src
+
+  #+begin_src bash :async t
+    pip install ipython jupyter_client jupyter_console numpy matplotlib scipy
+  #+end_src
+
+  #+begin_src bash
+    pip3 install sympy
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  Collecting sympy
+    Using cached https://files.pythonhosted.org/packages/dd/f6/ed485ff22efdd7b371d0dbbf6d77ad61c3b3b7e0815a83c89cbb38ce35de/sympy-1.3.tar.gz
+  Collecting mpmath>=0.19 (from sympy)
+    Using cached https://files.pythonhosted.org/packages/ca/63/3384ebb3b51af9610086b23ea976e6d27d6d97bf140a76a365bd77a3eb32/mpmath-1.1.0.tar.gz
+  Building wheels for collected packages: sympy, mpmath
+    Running setup.py bdist_wheel for sympy: started
+    Running setup.py bdist_wheel for sympy: finished with status 'done'
+    Stored in directory: /home/lsg/.cache/pip/wheels/6c/59/86/478e3c0f298368c119095cc5985dedac57c0e35a85c737f823
+    Running setup.py bdist_wheel for mpmath: started
+    Running setup.py bdist_wheel for mpmath: finished with status 'done'
+    Stored in directory: /home/lsg/.cache/pip/wheels/63/9d/8e/37c3f6506ed3f152733a699e92d8e0c9f5e5f01dea262f80ad
+  Successfully built sympy mpmath
+  Installing collected packages: mpmath, sympy
+  Successfully installed mpmath-1.1.0 sympy-1.3
+  :end:
+
+* Python Example 
+  #+begin_src python :results output link :file images/temp.png :async t
+    import matplotlib.pyplot as pylab
+    import numpy as np
+
+    t=np.linspace(0,20*np.pi,350)
+    x=np.exp(-0.1*t)*np.sin(t)
+    y=np.exp(-0.1*t)*np.cos(t)
+
+    pylab.plot(x,y)
+    pylab.axis('equal')
+    pylab.savefig("images/temp.png")
+  #+end_src
+
+  #+RESULTS:
+  [[file:images/temp.png]]
+
+
+
+
+
+
+* Pycse from [[https://kitchingroup.cheme.cmu.edu/pycse/pycse.html#org1d19e65][kitchin]]
+  :PROPERTIES:
+  :header-args:python:
+  :END:
+
+** Functions
+   :PROPERTIES:
+   :header-args:python: :session funcs
+   :END:
+   #+begin_src python :results output
+     import numpy as np
+     def f(x):
+         return x**3-np.log(x)
+     print(f(3))
+   #+end_src
+
+   #+RESULTS:
+   : 25.90138771133189
+   #+begin_src python :results output
+     def f(x):
+         x = np.array(x)
+         return 1.0/x**2
+
+     print(f(3))
+     print(f([4,5]))
+   #+end_src
+
+   #+RESULTS:
+   : 0.111111111111
+   : [0.0625 0.04  ]
+   #+begin_src python :results output
+     from scipy.integrate import quad
+     print(quad(lambda x:x**3,0,2))
+   #+end_src
+
+   #+RESULTS:
+   : (4.0, 4.440892098500626e-14)
+   #+begin_src python :results link :file images/ode.png
+     from scipy.integrate import odeint
+     import matplotlib.pyplot as pylab
+
+     k = 2.2
+     def myode(y,t):
+         return k*y
+
+     y0=3
+     tspan = np.linspace(0,1)
+     y = odeint(myode,y0,tspan)
+
+     pylab.plot(tspan,y)
+     pylab.savefig('images/ode.png')
+   #+end_src
+
+   #+RESULTS:
+   [[file:images/ode.png]]
+
+   Arbitrary positional arguments, =*args=. The variable =args= is a tuple containing all of the arguments passed to the function.
+   #+begin_src python :results output
+     def func(*args):
+         sum=0
+         for arg in args:
+             sum += arg
+         return sum
+
+     print(func(1,2,3,4))
+   #+end_src
+
+   #+RESULTS:
+   : 10
+   #+begin_src python :results output
+     import functools, operator
+     def func(*args):
+         return functools.reduce(operator.add,args)
+     print(func(1,2,3,4))
+   #+end_src
+
+   #+RESULTS:
+   : 10
+   Arbitrary keyword arguments
+   #+begin_src python :results output
+     def func(**kwargs):
+         for kw in kwargs:
+             print('{0} = {1}'.format(kw,kwargs[kw]))
+
+     func(t1=6,color='blue')
+   #+end_src
+
+   #+RESULTS:
+   : color = blue
+   : t1 = 6
+   #+begin_src python :results link :file images/fig2.png
+     def myplot(x,y,fname=None,**kwargs):
+         "make plot of x,y. save to fname if not None. Provide kwargs to plot."
+         pylab.plot(x,y,**kwargs)
+         pylab.xlabel('X')
+         pylab.ylabel('Y')
+         pylab.title('My Plot')
+         if fname:
+             pylab.savefig(fname)
+         else:
+             pylab.show()
+
+     x = [1,3,4,5]
+     y = [3,6,9,12]
+
+     pylab.figure(1)
+     myplot(x,y,'images/exm.png',color='orange',marker='s')
+
+     pylab.figure(2)
+     d = {'color':'magenta','marker':'d'}
+     myplot(x,y,'images/fig2.png',**d)
+   #+end_src
+
+   #+RESULTS:
+   [[file:images/fig2.png]]
+
+   Lambda
+   #+begin_src python :results output
+     f = lambda x: 2*x
+     print(f)
+     print(f(2))
+   #+end_src
+
+   #+RESULTS:
+   : <function <lambda> at 0x7ff9a48f8668>
+   : 4
+   #+begin_src python :results output
+     f = lambda **kwargs: kwargs
+
+     print(f(a=1,b=3))
+   #+end_src
+
+   #+RESULTS:
+   : {'a': 1, 'b': 3}
+   #+begin_src python :results output
+     from scipy.optimize import fsolve
+
+     sol, = fsolve(lambda x:2.5-np.sqrt(x),8)
+     print(sol)
+   #+end_src
+
+   #+RESULTS:
+   : 6.25000000000001
+   #+begin_src python :results output
+     def func(x,a):
+         return a*np.sqrt(x)-4.0
+
+     sol,=fsolve(lambda x:func(x,3.2),3)
+     print(sol)
+   #+end_src
+
+   #+RESULTS:
+   : 1.5625000000000078
+   #+begin_src python :results link :file images/cos.png
+     x = np.linspace(0,np.pi,10)
+     pylab.figure(3)
+     pylab.plot(x,np.cos(x))
+     pylab.savefig('images/cos.png')
+   #+end_src
+
+   #+RESULTS:
+   [[file:images/cos.png]]
+
+** Data structure
+   #+begin_src python :results output 
+     c = ['benzene',6.9056,1211.0,220.79,[-16,104]]
+     print(c[0])
+     print(c[-1])
+
+     a,b=c[0:2]
+     print(a,b)
+
+     name, A, B, C, Trange = c
+     print(Trange)
+   #+end_src
+
+   #+RESULTS:
+   : benzene
+   : [-16, 104]
+   : ('benzene', 6.9056)
+   : [-16, 104]
+
+   Tuples are immutable.
+   #+begin_src python :results output
+     a = (3, 4, 5, [7,8], 'cat')
+     print(a[0],a[-1])
+   #+end_src
+
+   #+RESULTS:
+   : (3, 'cat')
+   #+begin_src python :results output
+     class Antoine:
+         pass
+
+     a = Antoine()
+     a.name = 'benzene'
+     a.Trange = [-16,104]
+
+     print(a.name)
+     print(hasattr(a, 'Trange')) # has attribute??
+     print(hasattr(a, 'A'))
+   #+end_src
+
+   #+RESULTS:
+   : benzene
+   : True
+   : False
+
+   #+begin_src python :results output
+     s = {'name':'benzene',
+          'A':6.9056,
+          'B':1211.1}
+
+     s['C'] = 220.79
+     s['Trange'] = [-16,104]
+
+     print(s)
+     print(s['Trange'])
+   #+end_src
+
+   #+RESULTS:
+   : {'A': 6.9056, 'C': 220.79, 'B': 1211.1, 'name': 'benzene', 'Trange': [-16, 104]}
+   : [-16, 104]
+
+   #+begin_src python :results output
+     s = {'name':'benzene',
+          'A':6.9056,
+          'B':1211.0}
+
+     print('C' in s)
+     print(s.get('C',None))
+     print(s.keys())
+     print(s.values())
+   #+end_src
+
+   #+RESULTS:
+   : False
+   : None
+   : ['A', 'B', 'name']
+   : [6.9056, 1211.0, 'benzene']
+   #+begin_src python :results output
+     print('The value of 1/3 to 3 decimal places is {0:1.3f}'.format(1./3.))
+
+     for x in [1./3.,1./6.,1./9.]:
+         print('The answer is {0:1.2f}'.format(x))
+
+     import numpy as np
+     eps = np.finfo(np.double).eps
+     print('{0:1.3e}'.format(eps))
+
+     print('The fraction {0} corresponds to {0:1.0%}'.format(0.78))
+   #+end_src
+
+   #+RESULTS:
+   : The value of 1/3 to 3 decimal places is 0.333
+   : The answer is 0.33
+   : The answer is 0.17
+   : The answer is 0.11
+   : 2.220e-16
+   : The fraction 0.78 corresponds to 78%
+   #+begin_src python :results output
+     s = 'The {speed} {color} fox'.format(color='brown',speed='quick')
+     print(s)
+   #+end_src
+
+   #+RESULTS:
+   : The quick brown fox
+   #+begin_src python :results output
+     speed = 'slow'
+     color = 'blue'
+
+     print('The {speed} {color} fox'.format(**locals()))
+   #+end_src
+
+   #+RESULTS:
+   : The slow blue fox
+
+   #+begin_src python :results output
+     class A:
+         def __init__(self,a,b,c):
+             self.a = a
+             self.b = b
+             self.c = c
+
+     mya = A(3,4,5)
+
+     print('a = {obj.a}, b = {obj.b}, c = {obj.c:1.2f}'.format(obj=mya))
+   #+end_src
+
+   #+RESULTS:
+   : a = 3, b = 4, c = 5.00
+
+   #+begin_src python :results output
+     d = {'a': 56, "test":'woohoo!'}
+     print("the value of a in the dictionary is {obj[a]}. It works {obj[test]}".format(obj=d))
+   #+end_src
+
+   #+RESULTS:
+   : the value of a in the dictionary is 56. It works woohoo!
+
+   #+begin_src python :results output
+     L = [4, 5, 'cat']
+
+     print('element 0 = {obj[0]}, and the last element is {obj[2]}'.format(obj=L))
+   #+end_src
+
+   #+RESULTS:
+   : element 0 = 4, and the last element is cat
+
+   #+begin_src python :results output
+     class A:
+         def __init__(self,a,b):
+             self.a = a; self.b = b
+
+         def __format__(self,format):
+             s = 'a={{0:{0}}} b={{1:{0}}}'.format(format)
+             return s.format(self.a, self.b)
+
+         def __str__(self):
+             return 'str: class A, a={0} b={1}'.format(self.a,self.b)
+
+         def __repr__(self):
+             return 'representing: class A, a={0}, b={1}'.format(self.a,self.b)
+
+     mya = A(3,4)
+
+     print('{0}'.format(mya))        # use format
+     print('{0!s}'.format(mya))      # use str
+     print('{0!r}'.format(mya))      # use repr
+   #+end_src
+
+   #+RESULTS:
+   : a=3 b=4
+   : str: class A, a=3 b=4
+   : representing: class A, a=3, b=4
+
+** Math 
+Numeric derivatives
+#+begin_src python :results link :file images/simple-diffs.png
+  import numpy as np
+  import pylab
+  import time
+
+  x = np.linspace(0.78,0.79,100)
+  y = np.sin(x)
+  dy_analytical = np.cos(x)
+
+  tf1 = time.time()
+  dyf = [0.0]*len(x)
+  for i in range(len(y)-1):
+      dyf[i] = (y[i+1]-y[i])/(x[i+1]-x[i])
+  dyf[-1] = (y[-1]-y[-2])/(x[-1]-x[-2])
+
+  print(' Forward difference took %f seconds' % (time.time()-tf1))
+
+  tb1 = time.time()
+  dyb = [0.0]*len(x)
+  dyb[0] = (y[0]-y[1])/(x[0]-x[1])
+  for i in range(1,len(y)):
+      dyb[i] = (y[i]-y[i-1])/(x[i]-x[i-1])
+  print(' Backward difference took %f seconds' % (time.time()-tb1))
+
+  tc1 = time.time()
+  dyc = [0.0]*len(x)
+  dyc[0] = (y[0]-y[1])/(x[0]-x[1])
+  for i in range(1,len(x)-1):
+      dyc[i]=(y[i+1]-y[i-1])/(x[i+1]-x[i-1])
+  dyc[-1] = (y[-1]-y[-2])/(x[-1]-x[-2])
+  print(' Centered difference took %f seconds' % (time.time()-tc1))
+
+  pylab.plot(x,dy_analytical,label='analytical derivative')
+  pylab.plot(x,dyf,'--',label='forward')
+  pylab.plot(x,dyb,'--',label='backward')
+  pylab.plot(x,dyc,'--',label='centered')
+
+  pylab.legend(loc='lower left')
+  pylab.savefig('images/simple-diffs.png')
+#+end_src
+
+#+RESULTS:
+[[file:images/simple-diffs.png]]
+
+vectorized numeric derivatives
+#+begin_src python :results link :file images/vectorized-diffs.png 
+  import numpy as np
+  import pylab
+
+  x = np.linspace(0,2*np.pi,100)
+  y = np.sin(x)
+  dy_analytical = np.cos(x)
+
+  dy = np.zeros(y.shape,np.float)
+  dy[0:-1]=np.diff(y) / np.diff(x)
+  dy[-1] = (y[-1]-y[-2])/(x[-1]-x[-2])
+
+  dy2 = np.zeros(y.shape,np.float)
+  dy2[1:-1] = (y[2:]-y[0:-2])/(x[2:]-x[0:-2])
+  dy2[0] = (y[1]-y[0])/(x[1]-x[0])
+  dy2[-1] = (y[-1]-y[-2])/(x[-1]-x[-2])
+
+  pylab.plot(x,y)
+  pylab.plot(x,dy_analytical,label='analytical derivative')
+  pylab.plot(x,dy,label='forward diff')
+  pylab.plot(x,dy,'k--',lw=2,label='centered diff')
+  pylab.legend(loc='lower left')
+
+  pylab.savefig('images/vectorized-diffs.png')
+#+end_src
+
+#+RESULTS:
+[[file:images/vectorized-diffs.png]]
+
+
+Piecewise function
+#+begin_src python :results output
+  def f1(x):
+      if x<0:
+          return 0
+      elif (x>=0) & (x<1):
+          return x
+      elif (x>=1) & (x<2):
+          return 2.0 - x
+      else:
+          return 0
+
+  print(f1(-1))
+#+end_src
+
+#+RESULTS:
+: 0
+Vectorize the piecewise function
+#+begin_src python :results link :file images/vector-piecewise.png 
+  import numpy as np
+  def f2(x):
+      x = np.asarray(x)
+      y = np.zeros(x.shape)
+      y += ((x>=0) & (x<1)) * x
+      y += ((x>=1) & (x<2)) * (2-x)
+      return y
+  x = np.linspace(-1,3,1000)
+  import matplotlib.pyplot as plt
+  plt.plot(x,f2(x))
+  plt.tight_layout()
+  plt.savefig('images/vector-piecewise.png')
+  print(f2(x))
+#+end_src
+
+#+RESULTS:
+[[file:images/vector-piecewise.png]]
+
+#+begin_src python :results output
+  from scipy.interpolate import interp1d
+  from scipy.integrate import quad
+  import numpy as np
+  x = [0, 0.5, 1, 1.5, 2]
+  y = [0, 0.1250, 1.0000, 3.3750, 8.0000]
+
+  f = interp1d(x,y)
+
+  xfine = np.linspace(0.25,1.75)
+  yfine = f(xfine)
+  print(np.trapz(yfine,xfine))
+  ans, err = quad(f,0.25,1.75)
+  print(ans)
+#+end_src
+
+#+RESULTS:
+: 2.531991878384006
+: 2.53125
+
+#+begin_src python :results output
+  import numpy as np
+  import time
+
+  a = 0.0; b = np.pi;
+  N = 1000
+
+  h = (b-a)/N
+  x = np.linspace(a,b,N)
+  y = np.sin(x)
+
+  t0 = time.time()
+  f = 0.0
+  for k in range(len(x)-1):
+      f += 0.5*((x[k+1]-x[k])*(y[k+1]+y[k]))
+  tf = time.time()-t0
+  print('time elapsed = {0} sec'.format(tf))
+
+  print(f)
+
+  t0 = time.time()
+  Xk = x[1:-1]-x[0:-2]
+  Yk = y[1:-1]+y[0:-2]
+  f = 0.5*np.sum(Xk*Yk)
+  tf = time.time()-t0
+  print('\ntime elapsed = {0} sec'.format(tf))
+  print(f)
+
+  t0 = time.time()
+  f = 0.5*np.dot(Xk,Yk)
+  tf = time.time() - t0
+  print('\ntime elapsed = {0} sec'.format(tf))
+  print(f)
+#+end_src
+
+#+RESULTS:
+: time elapsed = 0.00124907493591 sec
+: 1.9999983517708524
+: 
+: time elapsed = 2.90870666504e-05 sec
+: 1.9999934070923728
+: 
+: time elapsed = 7.86781311035e-06 sec
+: 1.999993407092373
+
+Double integrals
+#+begin_src python :results output
+  from scipy.integrate import dblquad
+  import numpy as np
+
+  def integrand(y,x):
+      return y*np.sin(x) + x*np.cos(y)
+
+  ans,err = dblquad(integrand,np.pi,2*np.pi,lambda x:0,lambda x:np.pi)
+
+  print(ans)
+#+end_src
+
+#+RESULTS:
+: -9.86960440109
+
+Symbolic math
+#+begin_src python :results output
+  from sympy import solve, symbols, pprint
+
+  a,b,c,x = symbols('a,b,c,x')
+
+  f = a*x**2 + b*x + c
+
+  solution = solve(f,x)
+  print(solution)
+  pprint(solution)
+#+end_src
+
+#+RESULTS:
+: [(-b + sqrt(-4*a*c + b**2))/(2*a), -(b + sqrt(-4*a*c + b**2))/(2*a)]
+:          _____________   /       _____________\  
+:         /           2    |      /           2 |  
+:  -b + \/  -4*a*c + b    -\b + \/  -4*a*c + b  /  
+: [---------------------, ------------------------]
+:           2*a                     2*a            
+
+
+#+begin_src python :results output
+  import sympy
+  from sympy import *
+  import numpy as np
+
+  a,b,x = symbols('a,b,x')
+  f = sympy.ln(x)+a*x**2+b*x
+  print(diff(f,x))
+#+end_src
+
+#+RESULTS:
+: 2*a*x + b + 1/x
+
+#+begin_src python :results output
+  from sympy import Function, Symbol, dsolve
+  f = Function('f')
+  x = Symbol('x')
+  fprime = f(x).diff(x) - f(x) # f' = f(x)
+
+  y = dsolve(fprime, f(x))
+
+  print(y)
+  print(y.subs(x,4))
+#+end_src
+
+#+RESULTS:
+: Eq(f(x), C1*exp(x))
+: Eq(f(4), C1*exp(4))
+
+#+begin_src python :results output
+  import sympy
+  from sympy import symbols, solve, pprint, Eq
+  from sympy.plotting import plot, plot_implicit
+  import time
+
+  x,y = symbols('x,y')
+
+  f = x**2 + y**2 + 1
+
+  solution = solve(f,x)
+
+  t0 = time.time()
+  plot(x,f)
+  print('plot time is {} seconds'.format(time.time()-t0))
+  #plot_implicit(Eq(x**2+y**2-1))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :results output
+  import numpy as np
+  print(np.spacing(1))
+
+  def feq(x,y,eps):
+      return not ((x<(y-eps)) or (y<(x-eps)))
+
+  print(feq(1.0,49.0*(1.0/49.0),np.spacing(1)))
+#+end_src
+
+#+RESULTS:
+: 2.220446049250313e-16
+: True
+
+#+begin_src python :results output :tangle test.py
+  import numpy as np
+
+  a = np.array([0,1,2])
+  print(a.shape)
+  print(a)
+  print(a.T)
+
+  print(np.dot(a,a))
+  print(np.dot(a,a.T))
+
+  print(a @ a)
+#+end_src
+
+#+RESULTS:
+: (3,)
+: [0 1 2]
+: [0 1 2]
+: 5
+: 5
+: 5
+
+#+begin_src python :results output
+  import numpy as np
+
+  b = np.array([[0,1,2]])
+  print(b.shape)
+  print(b)
+  print(b.T)
+
+  print(b @ b.T)
+#+end_src
+
+#+RESULTS:
+: (1, 3)
+: [[0 1 2]]
+: [[0]
+:  [1]
+:  [2]]
+: [[5]]
+
+Solving linear equations
+#+begin_src python :results output
+  import numpy as np
+  A = np.array([[1,-1,1],
+               [0,10,25],
+               [20,10,0]])
+
+  b = np.array([0,90,80])
+
+  x = np.linalg.solve(A,b)
+
+  print(x)
+  print(A @ x)
+
+  print(A@x==b)
+  tol = 1e-12
+  print(np.abs(A@x-b)<=tol)
+
+  u,s,v = np.linalg.svd(A)
+  print('Singular values: {0}'.format(s))
+  print('# of independent rows: {0}'.format(np.sum(np.abs(s) > tol)))
+
+  B = np.array([[1,-1,1],
+                [0,10,25],
+                [0,20,50]])
+  u,s,v = np.linalg.svd(A)
+  print('Singular values: {0}'.format(s))
+  print('# of independent rows: {0}'.format(np.sum(np.abs(s)>tol)))
+#+end_src
+
+#+RESULTS:
+: [2. 4. 2.]
+: [2.66453526e-15 9.00000000e+01 8.00000000e+01]
+: [False  True  True]
+: [ True  True  True]
+: Singular values: [27.63016717 21.49453733  1.5996022 ]
+: # of independent rows: 3
+: Singular values: [27.63016717 21.49453733  1.5996022 ]
+: # of independent rows: 3

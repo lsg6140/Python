@@ -1,0 +1,6 @@
+# ignore everything
+*
+
+# not these files
+!.gitignore
+!./lppy/lppy.org
