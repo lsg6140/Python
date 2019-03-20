@@ -1,3 +1,4 @@
+#+OPTIONS: tex:t
 * A discretized population balance for nucleation, growth, and aggregation
 ** Population balance
 The population balance for a well-mixed batch system of constant volume is given as
@@ -5,7 +6,7 @@ The population balance for a well-mixed batch system of constant volume is given
 \begin{equation}
 \frac{\partial n}{\partial t}+\frac{\partial(Gn)}{\partial L}=B-D
 \end{equation}
-$n$ is the number-density function: If there are $dN$ particles per unit volume of suspension in the size range $L$ to $dL$, then at that size and time the density function if $n=dN/dL$. 
+\(n\) is the number-density function: If there are $dN$ particles per unit volume of suspension in the size range $L$ to $dL$, then at that size and time the density function if $n=dN/dL$. 
 *** Aggregation
 Birth rate by aggregation
 \begin{align}
