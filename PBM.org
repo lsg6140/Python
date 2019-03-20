@@ -1,4 +1,4 @@
-#+OPTIONS: tex:t
+#+startup: latexpreview
 * A discretized population balance for nucleation, growth, and aggregation
 ** Population balance
 The population balance for a well-mixed batch system of constant volume is given as
