@@ -1,0 +1,15 @@
+* A discretized population balance for nucleation, growth, and aggregation
+** Population balance
+The population balance for a well-mixed batch system of constant volume is given as
+
+\begin{equation}
+\frac{\partial n}{\partial t}+\frac{\partial(Gn)}{\partial L}=B-D
+\end{equation}
+$n$ is the number-density function: If there are $dN$ particles per unit volume of suspension in the size range $L$ to $dL$, then at that size and time the density function if $n=dN/dL$. 
+*** Aggregation
+Birth rate by aggregation
+\begin{align}
+B'(v)&=\frac{1}{2}\int_0^v\beta'(v-\epsilon,\epsilon)n'(v-\epsilon)n'(\epsilon)d\epsilon\\
+D'(v)&=n'(v)\int_0^\infty\beta'(v,\epsilon)n'(\epsilon)d\epsilon
+\end{align}
+The prime is used to signify volume as the internal coordinate. The coalescence kernel, $\beta'(v,\epsilon)$, is a measure of the frequency of collisions between particles of volume $v$ and $\epsilon$. 
