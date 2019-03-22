@@ -168,19 +168,20 @@ Let \(\overline{L_i^3}=2^i\), then
      &+N_{n-2}\left(3k\sum_{j=1}^{n-3}2^{j-1}N_j-2^{n-2}N_{n-1}\right)\\
      &+N_{n-1}\left(3k\sum_{j=1}^{n-2}2^{j-1}N_j\right)\\
      &-2N_1\sum_{j=2}^{n-1}N_j\\
-     &=3kN_1N_2\hspace{60 mm}-2^2(N_2N_3+N_2N_4+\cdots+N_2N_{n-2}+N_2N_{n-1})\\
-     &+3k(N_1N_3+2N_2N_3)\hspace{43 mm}-2^3(N_3N_4+N_3N_5+\cdots+N_3N_{n-2}+N_3N_{n-1})\\
-     &+3k(N_1N_4+2N_2N_4+2^2N_3N_4)\hspace{26 mm}-2^4(N_4N_5+N_4N_6+\cdots+N_4N_{n-2}+N_4N_{n-1})\\
+     &=3kN_1N_2\hspace{50 mm}-2^2(N_2N_3+N_2N_4+\cdots+N_2N_{n-2}+N_2N_{n-1})\\
+     &+3k(N_1N_3+2N_2N_3)\hspace{31 mm}-2^3(N_3N_4+N_3N_5+\cdots+N_3N_{n-2}+N_3N_{n-1})\\
+     &+3k(N_1N_4+2N_2N_4+2^2N_3N_4)\hspace{15 mm}-2^4(N_4N_5+N_4N_6+\cdots+N_4N_{n-2}+N_4N_{n-1})\\
      &\vdots\\
-     &+3k(N_1N_{n-2}+2N_2N_{n-2}+\cdots+2^{n-5}N_{n-4}N_{n-2}+2^{n-4}N_{n-3}N_{n-2})\hspace{10 mm}-2^{n-2}(N_{n-2}N_{n-1})\\
+     &+3k(N_1N_{n-2}+2N_2N_{n-2}+\cdots+2^{n-5}N_{n-4}N_{n-2}+2^{n-4}N_{n-3}N_{n-2})-2^{n-2}(N_{n-2}N_{n-1})\\
      &+3k(N_1N_{n-1}+2N_2N_{n-1}+\cdots+2^{n-4}N_{n-3}N_{n-1}+2^{n-3}N_{n-2}N_{n-1})\\
-     &-2(N_1N_2+N_1N_3+\cdots+N_1N_{n-1}+N_1N_{n-1})\\
+     &-2(N_1N_2+N_1N_3+\cdots+N_1N_{n-1}+N_1N_{n-1})\\\\
      &=(3k-2)(N_1N_2+N_1N_3+\cdots+N_1N_{n-1})\\
      &+2(3k-2)(N_2N_3+N_2N_4+\cdots+N_2N_{n-1})\\
      &\vdots\\
      &+2^{n-3}(3k-2)(N_{n-2}N_{n-1})\\
 \end{align*}
 Third moment is total volume of particles which must be preserved. Therefore, \(k=2/3\) to make \(dm_3/dt=0\)
+*** Discretized aggregation model
 Therefore, the complete eqation is
 \begin{equation}
 \begin{aligned}
@@ -191,3 +192,139 @@ Therefore, the complete eqation is
 \end{aligned}
 \end{equation}
 *** Aggregation function code
+    #+name: libraries
+    #+begin_src python :session pbm :exports none
+      import numpy as np
+      import matplotlib.pyplot as plt
+    #+end_src
+
+    #+RESULTS: libraries
+
+    #+name: aggregation
+    #+begin_src python :session pbm :exports code :results output
+      # Y contains moment terms. Last four elements are moment terms.
+      def aggregation(Y,beta,L):
+          n = len(Y)-4
+          N = Y[0:n]
+          R1 = np.zeros(n)
+          R2 = np.zeros(n)
+          R3 = np.zeros(n)
+          R4 = np.zeros(n)
+
+          # Python index starts with 0!
+          # Mechanism 1
+          for i in range(2,n):
+              for j in range(i-2):
+                  R1[i]=R1[i]+N[i-1]*2**(j-i+1)*beta[i-1][j]*N[j]
+
+          # Mechanism 2
+          for i in range(1,n):
+              R2[i]=beta[i-1][i-1]*N[i-1]**2/2
+
+          # Mechanism 3
+          for i in range(1,n-1):
+              for j in range (0,i-1):
+                  R3[i]=R3[i]+N[i]*beta[i][j]*2**(j-i)*N[j]
+
+          # Mechanism 4
+          for i in range(n-1):
+              for j in range(i,n-1):
+                  R4[i]=R4[i]+N[i]*beta[i][j]*N[j]
+
+          dNdt = R1+R2-R3-R4
+          m0 = np.sum(dNdt)
+          m1 = np.sum(L@dNdt)
+          m2 = np.sum(np.power(L,2)@dNdt)
+          m3 = np.sum(np.power(L,3)@dNdt)
+          dydt = np.append(dNdt,[m0,m1,m2,m3])
+          return dydt
+    #+end_src
+
+    #+RESULTS: aggregation
+
+#+begin_src python :session pbm :results output :exports none
+  N = np.random.rand(14)
+  beta = np.random.rand(10,10)
+  L = np.random.rand(10)
+  print(np.shape(N))
+
+  dNdt = aggregation(N,beta,L)
+  print(dNdt)
+  #+end_src
+
+#+RESULTS:
+: (14,)
+: [-2.67108904 -1.59328758 -0.62936839 -0.95095139  0.0518419  -0.65952383
+:  -0.22033728 -0.16226214 -0.18350633  0.17526006 -6.84322402 -2.40942216
+:  -1.05175592 -0.56220584]
+
+*** Testing the model
+- Analytical solution with constant coalescence kernel by Gelbard and Seinfield (1978) with dimensionless length and number is
+\begin{equation}
+\tilde{N}_i=\frac{2}{\tau+2}\left[\exp\left(-\frac{2\tilde{L}_i^3}{\tau+2}\right)-\exp\left(-\frac{4\tilde{L}_i^3}{\tau+2}\right)\right]
+\end{equation}
+#+name: constant beta test
+#+begin_src python :session pbm :results graphics :file images/const.png :exports both
+  from scipy.integrate import Radau
+  from scipy.integrate import odeint
+
+  tau = [0, 0.25, 1.0, 2.0]
+
+  # initial condition
+  n = 20
+  L = np.zeros(n)
+  L[0] = 1e-1
+  for i in range(n-1):
+      L[i+1] = L[i]*2**(1/3)
+  N0 = np.exp(-2*np.power(L,3)/2)-np.exp(-4*np.power(L,3)/2)
+  m00 = np.sum(N0)
+  m10 = np.sum(L@N0)
+  m20 = np.sum(np.power(L,2)@N0)
+  m30 = np.sum(np.power(L,3)@N0)
+  Y0=np.append(N0,[m00,m10,m20,m30])
+
+  beta = np.ones((n,n))
+
+  def dydx(y,t):
+      return aggregation(y,beta,L)
+
+  result = odeint(dydx,Y0,tau)
+  
+  print(result[0,0:20])
+  plt.plot(L,result[1,0:20])
+  plt.savefig('images/const.png')
+#+end_src
+
+#+RESULTS: constant beta test
+[[file:images/const.png]]
+
+#+begin_src python :export none :results output
+  import numpy as np
+
+  a = np.ones((20,20))
+  print(a)
+ #+end_src
+
+#+RESULTS:
+#+begin_example
+[[1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]
+ [1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1.]]
+#+end_example
