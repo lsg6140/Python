@@ -1170,3 +1170,10 @@ Solving linear equations
 
    #+RESULTS:
    [[file:images/odefitting.png]]
+
+   #+begin_src python :results link :file images/tank.png
+     import numpy as np
+     from scipy.integrate import odeint
+     import matplotlib.pyplot as plt
+
+   #+end_src

@@ -1,6 +1,9 @@
-# ignore everything
-*
-
-# not these files
-!.gitignore
-!./lppy/lppy.org
+bin/
+include/
+lib/
+share/
+ltximg/
+PBM.html
+PBM.tex
+PBM.pdf
+auto/
