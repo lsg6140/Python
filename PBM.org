@@ -6,11 +6,188 @@ The population balance for a well-mixed batch system of constant volume is given
 \begin{equation}
 \frac{\partial n}{\partial t}+\frac{\partial(Gn)}{\partial L}=B-D
 \end{equation}
-\(n\) is the number-density function: If there are $dN$ particles per unit volume of suspension in the size range $L$ to $dL$, then at that size and time the density function if $n=dN/dL$. 
+\(n\) is the number-density function: If there are $dN$ particles per unit volume of suspension in the size range $L$ to $dL$, then at that size and time the density function is $n=dN/dL$. 
 *** Aggregation
 Birth rate by aggregation
 \begin{align}
 B'(v)&=\frac{1}{2}\int_0^v\beta'(v-\epsilon,\epsilon)n'(v-\epsilon)n'(\epsilon)d\epsilon\\
 D'(v)&=n'(v)\int_0^\infty\beta'(v,\epsilon)n'(\epsilon)d\epsilon
 \end{align}
-The prime is used to signify volume as the internal coordinate. The coalescence kernel, $\beta'(v,\epsilon)$, is a measure of the frequency of collisions between particles of volume $v$ and $\epsilon$. 
+The prime is used to signify volume as the internal coordinate. The coalescence kernel, $\beta'(v,\epsilon)$, is a measure of the frequency of collisions between particles of volume $v$ and $\epsilon$. Transform to length results
+\begin{align}
+B(L)=&\frac{L^2}{2}\int_0^L\frac{\beta[(L^3-\lambda^3)^{1/3},\lambda]n[(L^3-\lambda^3)^{1/3}]n(\lambda)}{(L^3-\lambda^3)^{2/3}}d\lambda\\
+D(L)=&n(L)\int_0^\infty\beta(L,\lambda)n(\lambda)d\lambda
+\end{align}
+** Moment transform
+The \(j\)th moment is defined as
+$$m_j=\int_0^\infty L^jn(L)dL$$
+The first four moments are related to total number, length, area, and volume of solid per unit volume of suspension by
+\begin{align}
+N_T=&m_0\\
+L_T=&k_Lm_1\\
+A_T=&k_Am_2\\
+V_T=&k_Vm_3
+\end{align}
+Values of shape factors depend on the shape of particles. 
+** Discrete population balance model
+Geometric discretization with $L_{i+1}/L_i=\sqrt[3]{2}$, for great range of sizes.
+
+#+tblname: Binary interaction mechanisms for aggregation
+| Mechanism | Birth or Death in Interval $i$ | Collision between Particles in Intervals |
+|-----------+--------------------------------+------------------------------------------|
+|         1 | Birth                          | $i-1$   $1\to i-2$                       |
+|         2 | Birth                          | $i-1$   $i-1$                            |
+|         3 | Death                          | $i$     $1\to i-1$                       |
+|         4 | Death                          | $i$     $i\to\infty$                     |
+|-----------+--------------------------------+------------------------------------------|
+
+The smallest size in the \(i\)th interval is $2^i$ and the largest size is $2^{i+1}$. The density function in this interval is given by \(n'=N_i/2^i\)
+*** Mechanism 1
+Consider the aggregation of a particle size $a$ (volume) in the \(j\)th interval, where \(j < i-1\). In order to form a particle in the \(i\)th interval it must collide with particles in the size range $2^i-a\leq v<2^i$, all of which are in the \((i-1)\)th interval. The number of particles available in $2^i-a\leq v<2^i$ is $a\times n'_{i-1}$ (volume range \(\times\) number density). Therefore the number of particles for collision is $aN_{i-1}/2^{i-1}$.
+The differential rate of aggregation $dR^{[1]}$ for particle size \(a < s < a+da\) is
+\begin{align*}
+dR_{i,j}^{[1]}=&\beta\frac{aN_{i-1}}{2^{i-1}}dN\\
+              =&\beta\frac{aN_{i-1}}{2^{i-1}}n'(a)da\\
+              =&\beta\frac{aN_{i-1}}{2^{i-1}}\frac{N_j}{2^j}da
+\end{align*}
+Let $\beta=\beta_{i-1,j}$, then
+\begin{align*}
+R_{i,j}^{[1]}=&\beta_{i-1,j}\int_{2^j}^{2^{j+1}}a2^{1-i-j}N_{i-1}N_jda\\
+             =&\beta_{i-1,j}2^{1-i-j}N_{i-1}N_j\int_{2^j}^{2^{j+1}}ada\\
+             =&\beta_{i-1,j}2^{1-i-j}N_{i-1}N_j\left[\frac{a^2}{2}\right]_{2^j}^{2^{j+1}}\\
+             =&\beta_{i-1,j}2^{1-i-j}N_{i-1}N_j\cdot3\cdot2^{2j-1}\\
+             =&3\cdot2^{j-1}\beta_{i-1,j}N_{i-1}N_j
+\end{align*}
+Aggregation birth by mechanism 1 in \(i\)th interval is
+\begin{equation}
+R_i^{[1]}=3N_{i-1}\sum_{j=1}^{i-2}2^{j-i}\beta_{i-1,j}N_j
+\end{equation}
+Mechanism 1 applies to the range \(3\sim n\) \\
+Caveat: Here, \(a\) is treated as a continuous variable. Therefore, it needs some correction factor for discretized variable.
+*** Mechanism 2
+Collision of particles both in \((i-1)\)th interval forms particle size in \(i\)th interval. The number of particles available is $N_{i-1}$, and the differential rate of birth is
+\begin{align*}
+dR_i^{[2]}=&\frac{1}{2}\beta_{i-1,i-1}N_{i-1}dN\\
+          =&\frac{1}{2}\beta_{i-1,i-1}N_{i-1}\frac{N_{i-1}}{2^{i-1}}da
+\end{align*}
+Same collision will count twice so it needs the leading term $\frac{1}{2}$.
+Sum over the interval $i-1$ is the total rate,
+\begin{equation}
+R_i^{[2]}=\frac{1}{2}\beta_{i-1,i-1}\int_{2^{i-1}}^{2^i}\frac{N_{i-1}^2}{2^{i-1}}da=\frac{1}{2}\beta_{i-1,i-1}N_{i-1}^2
+\end{equation}
+Mechanism 2 applies to the range \(2\sim n\)
+*** Mechanism 3 
+Death in the \(i\)th interval will occur when a particle of size $a$ in the \(j\)th interval aggregates with a particle size \(2^{i+1}-a < s < 2^{i+1}\). The number of particles in this range is $aN_i/2^i$. The differential rate of death is
+\begin{align*}
+dR_{i,j}^{[3]}=&\beta_{i,j}\frac{aN_i}{2^i}dN\\
+              =&\beta_{i,j}\frac{aN_i}{2^i}n'(a)da\\
+              =&\beta_{i,j}\frac{aN_i}{2^i}\frac{N_j}{2^j}da
+\end{align*}
+Integrating over \(j\)th interval,
+ \begin{align*}
+R_{i,j}^{[3]}&=\int_{2^j}^{2^{j+1}}\beta_{i,j}\frac{aN_iN_j}{2^{i+j}}da\\
+         &=\beta_{i,j}\frac{N_iN_j}{2^{i+j}}\left[\frac{a^2}{2}\right]_{2^j}^{2^{j+1}}\\
+         &=3\cdot2^{j-i-1}\beta_{i,j}N_iN_j
+\end{align*}
+By summing this equation over all feasible values of \(j\)
+\begin{equation}
+R_i^{[3]}=3N_i\sum_{j=1}^{i-1}\beta_{i,j}2^{j-i-1}N_j
+\end{equation}
+Mechanism 3 applies to the range \(2\sim n-1\)
+*** Mechanism 4
+Particle in the \(i\)th interval aggregate with a particle larger than \(i\)th interval, a death occurs in the \(i\)th interval. The rate is
+\begin{equation}
+R_i^{[4]}=N_i\sum_{j=i}^{n-1}\beta_{i,j}N_j
+\end{equation}
+Caveat: For volume conservation, it is assumped no aggregation death for largest interval (no aggregation death in \(n\)th interval)\\
+Mechanism 4 applies to the range \(1\sim n-1\)
+Collecting the terms for overall rate with the correction factor \(k\)
+\begin{equation}
+\frac{dN_i}{dt}=kR_i^{[1]}+R_i^{[2]}-kR_i^{[3]}-R_i^{[4]}
+\end{equation}
+The \(k\) is the volume correction factor.
+*** Zero-th moment
+Descretized moment equation is
+\begin{equation}
+m_j=\sum_i\overline{L_i^j}N_i
+\end{equation}
+For zero-th moment is
+\begin{align*}
+\frac{dm_0}{dt}=&\sum_i\frac{dN_i}{dt}\\
+               =&\sum_{i=3}^n\sum_{j=1}^{i-2}3k\beta2^{j-i}N_{i-1}N_j\\
+                &+\sum_{i=2}^n\frac{1}{2}\beta N_{i-1}^2\\
+                &-\sum_{i=2}^{n-1}\sum_{j=1}^{i-1}3k\beta2^{j-i-1}N_iN_j\\
+                &-\sum_{i=1}^{n-1}\sum_{j=i}^{n-1}\beta N_iN_j
+\end{align*}
+With some index adjustments and \(\sum_iN_i=m_0\)
+\begin{align*}
+\frac{dm_0}{dt}=&\sum_i\frac{dN_i}{dt}\\
+               =&\sum_{i=2}^{n-1}\sum_{j=1}^{i-1}3k\beta2^{j-i-1}N_iN_j\\
+                &+\sum_{i=1}^{n-1}\frac{1}{2}\beta N_i^2\\
+                &-\sum_{i=2}^{n-1}\sum_{j=1}^{i-1}3k\beta2^{j-i-1}N_iN_j\\
+                &-\sum_{i=1}^{n-1}\sum_{j=i}^{n-1}\beta N_iN_j\\
+               =&\sum_{i=1}^{n-1}\frac{1}{2}\beta N_i^2-\sum_{i=1}^{n-1}\sum_{j=i}^{n-1}\beta N_iN_j\\
+               =&\beta\left(\sum_{i=1}^{n-1}\frac{1}{2} N_i^2-\sum_{i=1}^{n-1}N_iN_i-\sum_{i=1}^{n-1}\sum_{j=i+1}^{n-1} N_iN_j\right)\\
+               =&-\frac{1}{2}\beta\left(\sum_{i=1}^{n-1} N_i^2+2\sum_{i=1}^{n-1}\sum_{j=i+1}^{n-1} N_iN_j\right)\\
+               =&-\frac{1}{2}\beta m_0^2           
+\end{align*}
+which is same with from the continuous moment equation.
+*** Third moment
+\begin{align*}
+\frac{dm_3}{dt}=&\sum_i\overline{L_i^3}\frac{dN_i}{dt}\\
+               =&\sum_{i=3}^n\overline{L_i^3}\sum_{j=1}^{i-2}3k\beta2^{j-i}N_{i-1}N_j\\
+                &+\sum_{i=2}^n\overline{L_i^3}\frac{1}{2}\beta N_{i-1}^2\\
+                &-\sum_{i=2}^{n-1}\overline{L_i^3}\sum_{j=1}^{i-1}3k\beta2^{j-i-1}N_iN_j\\
+                &-\sum_{i=1}^{n-1}\overline{L_i^3}\sum_{j=i}^{n-1}\beta N_iN_j\\
+\end{align*}
+With some index adjustment
+\begin{align*}
+\frac{dm_3}{dt}=&\sum_i\overline{L_i^3}\frac{dN_i}{dt}\\
+               =&\sum_{i=2}^{n-1}\overline{L_{i+1}^3}\sum_{j=1}^{i-2}3k\beta2^{j-i-1}N_iN_j\\
+                &+\sum_{i=1}^{n-1}\overline{L_{i+1}^3}\frac{1}{2}\beta N_i^2\\
+                &-\sum_{i=2}^{n-1}\overline{L_i^3}\sum_{j=1}^{i-1}3k\beta2^{j-i-1}N_iN_j\\
+                &-\sum_{i=1}^{n-1}\overline{L_i^3}\sum_{j=i}^{n-1}\beta N_iN_j\\               =&3k\beta\sum_{i=2}^{n-1}\left(\overline{L_{i+1}^3}-\overline{L_i^3}\right)N_i\sum_{j=1}^{i-1}2^{j-i-1}N_j\\
+                &+\beta\sum_{i=1}^{n-1}\left(\frac{1}{2}\overline{L_{i+1}^3}-\overline{L_i^3}\right)N_i^2\\
+                &-\beta\sum_{i=1}^{n-1}\overline{L_i^3}N_i\sum_{j=i+1}^{n-1}N_j
+\end{align*}
+Since \(L_{i+1}^3=2L_i^3\)
+\begin{align*}
+\frac{dm_3}{dt}=&3k\beta\sum_{i=2}^{n-1}\overline{L_i^3}N_i\sum_{j=1}^{i-1}2^{j-i-1}N_j-\beta\sum_{i=1}^{n-1}\overline{L_i^3}N_i\sum_{j=i+1}^{n-1} N_j\\
+               =&\beta\left[\sum_{i=2}^{n-1}\overline{L_i^3}N_i\left(3k\sum_{j=1}^{i-1}2^{j-i-1}N_j-\sum_{j=i+1}^{n-1} N_j\right)-\overline{L_1^3}N_1\sum_{j=2}^{n-1} N_j\right]
+\end{align*}
+Let \(\overline{L_i^3}=2^i\), then
+\begin{align*}
+\frac{dm_3}{dt}=&\beta\left[\sum_{i=2}^{n-1} N_i\left(3k\sum_{j=1}^{i-1}2^{j-1}N_j-2^i\sum_{j=i+1}^{n-1}N_j\right)-2N_1\sum_{j=2}^{n-1} N_j\right]\\
+\end{align*}
+\begin{align*}
+\sum_{i=2}^{n-1} &N_i\left(3k\sum_{j=1}^{i-1}2^{j-1}N_j-2^i\sum_{j=i+1}^{n-1}N_j\right)-2N_1\sum_{j=2}^{n-1}N_j\\
+    =&N_2\left(3kN_1-2^2\sum_{j=3}^{n-1}N_j\right)\\
+     &+N_3\left(3k\sum_{j=1}^22^{j-1}N_j-2^3\sum_{j=4}^{n-1}N_j\right)\\
+     &+N_4\left(3k\sum_{j=1}^32^{j-1}N_j-2^4\sum_{j=5}^{n-1}N_j\right)\\
+     &\vdots\\
+     &+N_{n-2}\left(3k\sum_{j=1}^{n-3}2^{j-1}N_j-2^{n-2}N_{n-1}\right)\\
+     &+N_{n-1}\left(3k\sum_{j=1}^{n-2}2^{j-1}N_j\right)\\
+     &-2N_1\sum_{j=2}^{n-1}N_j\\
+     &=3kN_1N_2\hspace{60 mm}-2^2(N_2N_3+N_2N_4+\cdots+N_2N_{n-2}+N_2N_{n-1})\\
+     &+3k(N_1N_3+2N_2N_3)\hspace{43 mm}-2^3(N_3N_4+N_3N_5+\cdots+N_3N_{n-2}+N_3N_{n-1})\\
+     &+3k(N_1N_4+2N_2N_4+2^2N_3N_4)\hspace{26 mm}-2^4(N_4N_5+N_4N_6+\cdots+N_4N_{n-2}+N_4N_{n-1})\\
+     &\vdots\\
+     &+3k(N_1N_{n-2}+2N_2N_{n-2}+\cdots+2^{n-5}N_{n-4}N_{n-2}+2^{n-4}N_{n-3}N_{n-2})\hspace{10 mm}-2^{n-2}(N_{n-2}N_{n-1})\\
+     &+3k(N_1N_{n-1}+2N_2N_{n-1}+\cdots+2^{n-4}N_{n-3}N_{n-1}+2^{n-3}N_{n-2}N_{n-1})\\
+     &-2(N_1N_2+N_1N_3+\cdots+N_1N_{n-1}+N_1N_{n-1})\\
+     &=(3k-2)(N_1N_2+N_1N_3+\cdots+N_1N_{n-1})\\
+     &+2(3k-2)(N_2N_3+N_2N_4+\cdots+N_2N_{n-1})\\
+     &\vdots\\
+     &+2^{n-3}(3k-2)(N_{n-2}N_{n-1})\\
+\end{align*}
+Third moment is total volume of particles which must be preserved. Therefore, \(k=2/3\) to make \(dm_3/dt=0\)
+Therefore, the complete eqation is
+\begin{equation}
+\begin{aligned}
+\frac{dN_i}{dt}=&N_{i-1}\sum_{j=1}^{i-2}2^{j-i+1}\beta_{i-1,j}N_j\quad(3<i<n)\\
+                &+\frac{1}{2}\beta_{i-1,i-1}N_{i-1}^2\quad(2<i<n)\\
+                &-N_i\sum_{j=1}^{i-1}\beta_{i,j}2^{j-i}N_j\quad(2<i<n-1)\\
+                &-N_i\sum_{j=i}^{n-1}\beta_{i,j}N_j\quad(1<i<n-1)
+\end{aligned}
+\end{equation}
+*** Aggregation function code
