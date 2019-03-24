@@ -3,121 +3,51 @@
 :PROPERTIES:
 :header-args: :results drawer
 :END:
-  #+begin_src bash :dir ~/dev/Python
-    virtualenv -p python3 lppy
+  #+begin_src bash :dir ~/dev
+    virtualenv Python
   #+end_src
 
   #+RESULTS:
   :results:
-  Using base prefix '/opt/local/Library/Frameworks/Python.framework/Versions/3.7'
-  New python executable in /Users/sglee/Dev/Python/lppy/bin/python3
-  Also creating executable in /Users/sglee/Dev/Python/lppy/bin/python
+  Using base prefix '/Library/Frameworks/Python.framework/Versions/3.7'
+  New python executable in /Users/sglee/dev/Python/bin/python3.7
+  Not overwriting existing python script /Users/sglee/dev/Python/bin/python (you must use /Users/sglee/dev/Python/bin/python3.7)
   Installing setuptools, pip, wheel...
   done.
-  Running virtualenv with interpreter /opt/local/bin/python3
   :end:
 
   #+begin_src elisp :results silent
-    (pyvenv-activate "~/dev/Python/lppy")
+    (pyvenv-activate "~/dev/Python")
   #+end_src
 
   #+begin_src bash :async t
-    pip install ipython jupyter_client jupyter_console numpy matplotlib scipy
+    pip3 install numpy matplotlib scipy sympy
   #+end_src
 
   #+RESULTS:
   :results:
-  Collecting ipython
-    Downloading https://files.pythonhosted.org/packages/14/3b/3fcf422a99a04ee493e6a4fc3014e3c8ff484a7feed238fef68bdc285085/ipython-7.3.0-py3-none-any.whl (768kB)
-  Collecting jupyter_client
-    Downloading https://files.pythonhosted.org/packages/3b/c3/3043fe9ffd140d03c9d091a056794ccdc427c56ec19b8eea74f9ea0a498f/jupyter_client-5.2.4-py2.py3-none-any.whl (89kB)
-  Collecting jupyter_console
-    Downloading https://files.pythonhosted.org/packages/cb/ee/6374ae8c21b7d0847f9c3722dcdfac986b8e54fa9ad9ea66e1eb6320d2b8/jupyter_console-6.0.0-py2.py3-none-any.whl
   Collecting numpy
-    Downloading https://files.pythonhosted.org/packages/a6/6f/cb20ccd8f0f8581e0e090775c0e3c3e335b037818416e6fa945d924397d2/numpy-1.16.2-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl (13.9MB)
+    Using cached https://files.pythonhosted.org/packages/a6/6f/cb20ccd8f0f8581e0e090775c0e3c3e335b037818416e6fa945d924397d2/numpy-1.16.2-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
   Collecting matplotlib
-    Downloading https://files.pythonhosted.org/packages/2e/81/bb51214944e79f9c9261badd7ef99b573fb0bc9110c0075c6a9e76224d0d/matplotlib-3.0.3-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl (14.3MB)
+    Using cached https://files.pythonhosted.org/packages/2e/81/bb51214944e79f9c9261badd7ef99b573fb0bc9110c0075c6a9e76224d0d/matplotlib-3.0.3-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
   Collecting scipy
-    Downloading https://files.pythonhosted.org/packages/dd/6c/ccf7403d14f0ab0f20ce611696921f204f4ffce99a4fd383c892a6a7e9eb/scipy-1.2.1-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl (27.3MB)
-  Collecting pygments (from ipython)
-    Downloading https://files.pythonhosted.org/packages/13/e5/6d710c9cf96c31ac82657bcfb441df328b22df8564d58d0c4cd62612674c/Pygments-2.3.1-py2.py3-none-any.whl (849kB)
-  Collecting decorator (from ipython)
-    Downloading https://files.pythonhosted.org/packages/f1/cd/7c8240007e9716b14679bc217a1baefa4432aa30394f7e2ec40a52b1a708/decorator-4.3.2-py2.py3-none-any.whl
-  Collecting pickleshare (from ipython)
-    Downloading https://files.pythonhosted.org/packages/9a/41/220f49aaea88bc6fa6cba8d05ecf24676326156c23b991e80b3f2fc24c77/pickleshare-0.7.5-py2.py3-none-any.whl
-  Collecting appnope; sys_platform == "darwin" (from ipython)
-    Downloading https://files.pythonhosted.org/packages/87/a9/7985e6a53402f294c8f0e8eff3151a83f1fb901fa92909bb3ff29b4d22af/appnope-0.1.0-py2.py3-none-any.whl
-  Requirement already satisfied: setuptools>=18.5 in /Users/sglee/Dev/Python/lppy/lib/python3.7/site-packages (from ipython) (40.8.0)
-  Collecting traitlets>=4.2 (from ipython)
-    Downloading https://files.pythonhosted.org/packages/93/d6/abcb22de61d78e2fc3959c964628a5771e47e7cc60d53e9342e21ed6cc9a/traitlets-4.3.2-py2.py3-none-any.whl (74kB)
-  Collecting prompt-toolkit<2.1.0,>=2.0.0 (from ipython)
-    Downloading https://files.pythonhosted.org/packages/f7/a7/9b1dd14ef45345f186ef69d175bdd2491c40ab1dfa4b2b3e4352df719ed7/prompt_toolkit-2.0.9-py3-none-any.whl (337kB)
-  Collecting pexpect; sys_platform != "win32" (from ipython)
-    Downloading https://files.pythonhosted.org/packages/89/e6/b5a1de8b0cc4e07ca1b305a4fcc3f9806025c1b651ea302646341222f88b/pexpect-4.6.0-py2.py3-none-any.whl (57kB)
-  Collecting backcall (from ipython)
-    Downloading https://files.pythonhosted.org/packages/84/71/c8ca4f5bb1e08401b916c68003acf0a0655df935d74d93bf3f3364b310e0/backcall-0.1.0.tar.gz
-  Collecting jedi>=0.10 (from ipython)
-    Downloading https://files.pythonhosted.org/packages/25/2b/1f188901be099d52d7b06f4d3b7cb9f8f09692c50697b139eaf6fa2928d8/jedi-0.13.3-py2.py3-none-any.whl (178kB)
-  Collecting pyzmq>=13 (from jupyter_client)
-    Downloading https://files.pythonhosted.org/packages/30/08/64b910e8f5e0285598a15a8d8f2f4d06a1367f0d145c7554fdd02d926272/pyzmq-18.0.1-cp37-cp37m-macosx_10_9_x86_64.whl (814kB)
-  Collecting python-dateutil>=2.1 (from jupyter_client)
-    Downloading https://files.pythonhosted.org/packages/41/17/c62faccbfbd163c7f57f3844689e3a78bae1f403648a6afb1d0866d87fbb/python_dateutil-2.8.0-py2.py3-none-any.whl (226kB)
-  Collecting tornado>=4.1 (from jupyter_client)
-    Downloading https://files.pythonhosted.org/packages/b1/7f/8109821ff9df1bf3519169e34646705c32ac13be6a4d51a79ed57f47686e/tornado-6.0.1.tar.gz (481kB)
-  Collecting jupyter-core (from jupyter_client)
-    Downloading https://files.pythonhosted.org/packages/1d/44/065d2d7bae7bebc06f1dd70d23c36da8c50c0f08b4236716743d706762a8/jupyter_core-4.4.0-py2.py3-none-any.whl (126kB)
-  Collecting ipykernel (from jupyter_console)
-    Downloading https://files.pythonhosted.org/packages/d8/b0/f0be5c5ab335196f5cce96e5b889a4fcf5bfe462eb0acc05cd7e2caf65eb/ipykernel-5.1.0-py3-none-any.whl (113kB)
-  Collecting pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1 (from matplotlib)
-    Downloading https://files.pythonhosted.org/packages/de/0a/001be530836743d8be6c2d85069f46fecf84ac6c18c7f5fb8125ee11d854/pyparsing-2.3.1-py2.py3-none-any.whl (61kB)
-  Collecting kiwisolver>=1.0.1 (from matplotlib)
-    Downloading https://files.pythonhosted.org/packages/68/f2/21ec13269a420c063a3d7d8c87dac030da7b00fc6b27fa88cfb1c72a645b/kiwisolver-1.0.1-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl (107kB)
-  Collecting cycler>=0.10 (from matplotlib)
-    Downloading https://files.pythonhosted.org/packages/f7/d2/e07d3ebb2bd7af696440ce7e754c59dd546ffe1bbe732c8ab68b9c834e61/cycler-0.10.0-py2.py3-none-any.whl
-  Collecting six (from traitlets>=4.2->ipython)
-    Downloading https://files.pythonhosted.org/packages/73/fb/00a976f728d0d1fecfe898238ce23f502a721c0ac0ecfedb80e0d88c64e9/six-1.12.0-py2.py3-none-any.whl
-  Collecting ipython-genutils (from traitlets>=4.2->ipython)
-    Downloading https://files.pythonhosted.org/packages/fa/bc/9bd3b5c2b4774d5f33b2d544f1460be9df7df2fe42f352135381c347c69a/ipython_genutils-0.2.0-py2.py3-none-any.whl
-  Collecting wcwidth (from prompt-toolkit<2.1.0,>=2.0.0->ipython)
-    Downloading https://files.pythonhosted.org/packages/7e/9f/526a6947247599b084ee5232e4f9190a38f398d7300d866af3ab571a5bfe/wcwidth-0.1.7-py2.py3-none-any.whl
-  Collecting ptyprocess>=0.5 (from pexpect; sys_platform != "win32"->ipython)
-    Downloading https://files.pythonhosted.org/packages/d1/29/605c2cc68a9992d18dada28206eeada56ea4bd07a239669da41674648b6f/ptyprocess-0.6.0-py2.py3-none-any.whl
-  Collecting parso>=0.3.0 (from jedi>=0.10->ipython)
-    Downloading https://files.pythonhosted.org/packages/19/b1/522b2671cc6d134c9d3f5dfc0d02fee07cab848e908d03d2bffea78cca8f/parso-0.3.4-py2.py3-none-any.whl (93kB)
-  Building wheels for collected packages: backcall, tornado
-    Building wheel for backcall (setup.py): started
-    Building wheel for backcall (setup.py): finished with status 'done'
-    Stored in directory: /Users/sglee/Library/Caches/pip/wheels/98/b0/dd/29e28ff615af3dda4c67cab719dd51357597eabff926976b45
-    Building wheel for tornado (setup.py): started
-    Building wheel for tornado (setup.py): finished with status 'done'
-    Stored in directory: /Users/sglee/Library/Caches/pip/wheels/09/a9/78/41e23ffcb122e8f4b02537f4480a276ec1ad760dd492373961
-  Successfully built backcall tornado
-  Installing collected packages: pygments, decorator, pickleshare, appnope, six, ipython-genutils, traitlets, wcwidth, prompt-toolkit, ptyprocess, pexpect, backcall, parso, jedi, ipython, pyzmq, python-dateutil, tornado, jupyter-core, jupyter-client, ipykernel, jupyter-console, numpy, pyparsing, kiwisolver, cycler, matplotlib, scipy
-  Successfully installed appnope-0.1.0 backcall-0.1.0 cycler-0.10.0 decorator-4.3.2 ipykernel-5.1.0 ipython-7.3.0 ipython-genutils-0.2.0 jedi-0.13.3 jupyter-client-5.2.4 jupyter-console-6.0.0 jupyter-core-4.4.0 kiwisolver-1.0.1 matplotlib-3.0.3 numpy-1.16.2 parso-0.3.4 pexpect-4.6.0 pickleshare-0.7.5 prompt-toolkit-2.0.9 ptyprocess-0.6.0 pygments-2.3.1 pyparsing-2.3.1 python-dateutil-2.8.0 pyzmq-18.0.1 scipy-1.2.1 six-1.12.0 tornado-6.0.1 traitlets-4.3.2 wcwidth-0.1.7
-  :end:
-
-  #+begin_src bash
-    pip3 install sympy
-  #+end_src
-
-  #+RESULTS:
-  :results:
+    Using cached https://files.pythonhosted.org/packages/dd/6c/ccf7403d14f0ab0f20ce611696921f204f4ffce99a4fd383c892a6a7e9eb/scipy-1.2.1-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
   Collecting sympy
-    Downloading https://files.pythonhosted.org/packages/dd/f6/ed485ff22efdd7b371d0dbbf6d77ad61c3b3b7e0815a83c89cbb38ce35de/sympy-1.3.tar.gz (5.9MB)
+  Collecting pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/de/0a/001be530836743d8be6c2d85069f46fecf84ac6c18c7f5fb8125ee11d854/pyparsing-2.3.1-py2.py3-none-any.whl
+  Collecting kiwisolver>=1.0.1 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/68/f2/21ec13269a420c063a3d7d8c87dac030da7b00fc6b27fa88cfb1c72a645b/kiwisolver-1.0.1-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
+  Collecting cycler>=0.10 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/f7/d2/e07d3ebb2bd7af696440ce7e754c59dd546ffe1bbe732c8ab68b9c834e61/cycler-0.10.0-py2.py3-none-any.whl
+  Collecting python-dateutil>=2.1 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/41/17/c62faccbfbd163c7f57f3844689e3a78bae1f403648a6afb1d0866d87fbb/python_dateutil-2.8.0-py2.py3-none-any.whl
   Collecting mpmath>=0.19 (from sympy)
-    Downloading https://files.pythonhosted.org/packages/ca/63/3384ebb3b51af9610086b23ea976e6d27d6d97bf140a76a365bd77a3eb32/mpmath-1.1.0.tar.gz (512kB)
-  Building wheels for collected packages: sympy, mpmath
-    Building wheel for sympy (setup.py): started
-    Building wheel for sympy (setup.py): finished with status 'done'
-    Stored in directory: /Users/sglee/Library/Caches/pip/wheels/6c/59/86/478e3c0f298368c119095cc5985dedac57c0e35a85c737f823
-    Building wheel for mpmath (setup.py): started
-    Building wheel for mpmath (setup.py): finished with status 'done'
-    Stored in directory: /Users/sglee/Library/Caches/pip/wheels/63/9d/8e/37c3f6506ed3f152733a699e92d8e0c9f5e5f01dea262f80ad
-  Successfully built sympy mpmath
-  Installing collected packages: mpmath, sympy
-  Successfully installed mpmath-1.1.0 sympy-1.3
+  Requirement already satisfied: setuptools in ./lib/python3.7/site-packages (from kiwisolver>=1.0.1->matplotlib) (40.8.0)
+  Collecting six (from cycler>=0.10->matplotlib)
+    Using cached https://files.pythonhosted.org/packages/73/fb/00a976f728d0d1fecfe898238ce23f502a721c0ac0ecfedb80e0d88c64e9/six-1.12.0-py2.py3-none-any.whl
+  Installing collected packages: numpy, pyparsing, kiwisolver, six, cycler, python-dateutil, matplotlib, scipy, mpmath, sympy
+  Successfully installed cycler-0.10.0 kiwisolver-1.0.1 matplotlib-3.0.3 mpmath-1.1.0 numpy-1.16.2 pyparsing-2.3.1 python-dateutil-2.8.0 scipy-1.2.1 six-1.12.0 sympy-1.3
   :end:
-
 * Python Example 
   #+begin_src python :results output link :file images/temp.png :async t
     import matplotlib.pyplot as pylab
