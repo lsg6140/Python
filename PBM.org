@@ -185,10 +185,10 @@ Third moment is total volume of particles which must be preserved. Therefore, \(
 Therefore, the complete eqation is
 \begin{equation}
 \begin{aligned}
-\frac{dN_i}{dt}=&N_{i-1}\sum_{j=1}^{i-2}2^{j-i+1}\beta_{i-1,j}N_j\quad(3<i<n)\\
-                &+\frac{1}{2}\beta_{i-1,i-1}N_{i-1}^2\quad(2<i<n)\\
-                &-N_i\sum_{j=1}^{i-1}\beta_{i,j}2^{j-i}N_j\quad(2<i<n-1)\\
-                &-N_i\sum_{j=i}^{n-1}\beta_{i,j}N_j\quad(1<i<n-1)
+\frac{dN_i}{dt}=&N_{i-1}\sum_{j=1}^{i-2}2^{j-i+1}\beta_{i-1,j}N_j\quad(3\leq i\leq n)\\
+                &+\frac{1}{2}\beta_{i-1,i-1}N_{i-1}^2\quad(2\leq i\leq n)\\
+                &-N_i\sum_{j=1}^{i-1}\beta_{i,j}2^{j-i}N_j\quad(2\leq i\leq n-1)\\
+                &-N_i\sum_{j=i}^{n-1}\beta_{i,j}N_j\quad(1\leq i\leq n-1)
 \end{aligned}
 \end{equation}
 *** Aggregation function code
@@ -212,24 +212,29 @@ Therefore, the complete eqation is
           R4 = np.zeros(n)
 
           # Python index starts with 0!
-          # Mechanism 1
+          # Mechanism 1 (i=3~n, j=1~i-2) !!! with index 1~n
           for i in range(2,n):
-              for j in range(i-2):
-                  R1[i]=R1[i]+N[i-1]*2**(j-i+1)*beta[i-1][j]*N[j]
-
-          # Mechanism 2
+              sum = 0
+              for j in range(i-1):
+                  sum += 2**(j-i+1)*beta[i-1][j]*N[j]
+              R1[i] = N[i-1]*sum
+          # Mechanism 2 (i=2~n)
           for i in range(1,n):
               R2[i]=beta[i-1][i-1]*N[i-1]**2/2
 
-          # Mechanism 3
+          # Mechanism 3 (i=2~n-1, j=1~i-1)
           for i in range(1,n-1):
-              for j in range (0,i-1):
-                  R3[i]=R3[i]+N[i]*beta[i][j]*2**(j-i)*N[j]
+              sum = 0
+              for j in range (i):
+                  sum += beta[i][j]*2**(j-i)*N[j]
+              R3[i] = N[i]*sum
 
-          # Mechanism 4
+          # Mechanism 4 (i=1~n-1, j=i~n-1)
           for i in range(n-1):
+              sum = 0
               for j in range(i,n-1):
-                  R4[i]=R4[i]+N[i]*beta[i][j]*N[j]
+                  sum += beta[i][j]*N[j]
+              R4[i] = N[i]*sum
 
           dNdt = R1+R2-R3-R4
           m0 = np.sum(dNdt)
@@ -241,27 +246,24 @@ Therefore, the complete eqation is
     #+end_src
 
     #+RESULTS: aggregation
-    : 
-    : 
-    : 
 
+#+name: test aggregation
 #+begin_src python :session pbm :results output :exports none
-  N = np.random.rand(14)
-  beta = np.random.rand(10,10)
-  L = np.random.rand(10)
-  print(np.shape(N))
+  nnn = np.random.rand(10)
+  bbb = np.random.rand(6,6)
+  lll = np.random.rand(6)
 
-  dNdt = aggregation(N,beta,L)
-  print(dNdt)
+  temp = aggregation(nnn,bbb,lll)
+  print(temp)
   #+end_src
 
+  #+RESULTS: test aggregation
+  : [-1.32039872 -0.17738517 -0.37343789  0.14413506 -0.36745177  0.22938879
+  :  -1.86514971 -0.52780626 -0.4846457  -0.45625346]
+
 #+RESULTS:
-: (14,)
-: [-0.93299022 -0.85642084 -1.59429781  0.12516238 -0.26061048 -0.26428762
-:  -0.22911258 -0.14038448  0.06171939  0.05972221 -4.03150005 -2.65290608
-:  -1.86141458 -1.40415005]
-: 
-: 
+: [-0.87125151 -1.02250932 -0.55253734 -0.59435383 -0.93334316  0.74016546
+:  -3.23382969 -1.25761713 -0.59213431 -0.29479818]
 
 *** Testing the model
 - Analytical solution with constant coalescence kernel by Gelbard and Seinfield (1978) with dimensionless length and number is
@@ -270,54 +272,54 @@ Therefore, the complete eqation is
 \end{equation}
 #+name: analytic solution with constant kernel
 #+begin_src python :session pbm :results output
-  def const_kernel(t,L):
+  def anal_const_kernel(t,L):
+      L = L.reshape((len(L),1))
       N = 2/(t+2)*(np.exp(-2*np.power(L,3)/(t+2))-np.exp(-4*np.power(L,3)/(t+2)))
       return N
 
-  def const_kernel_mat(tau,L):
-      N = []
-      for i in range(tau):
-          nt = const_kernel(tau[i],L)
+  def anal_const_kernel_array(tau,L):
+      N = anal_const_kernel(tau[0],L)
+      for i in range(1,len(tau)):
+          N = np.append(N,anal_const_kernel(tau[i],L),axis=1)
+      return N
 #+end_src
 
 #+RESULTS: analytic solution with constant kernel
-: 
-: 
-: 
 
-#+begin_src python :session pbm :results link :file images/analytic.png :exports none
-  tau = np.array([0,0.25,1.0,2.0])
-  xx = np.linspace(0.1,10,300)
-  N = constant_kernel(tau,xx)
-
-  plt.figure(2)
-  plt.clf()
-  for i in range(len(tau)):
-      plt.plot(xx,N[:,i])
-  plt.xscale("log")
-  plt.savefig('images/analytic.png')
+#+name: test analytic solution
+#+begin_src python :session pbm :results output :exports none
+  lll = np.array([0.1,0.2,0.4,0.8,1.6])
+  ttt = np.array([0,0.5,1])
+  nnn = anal_const_kernel_array(ttt,lll)
+  print(nnn)
 #+end_src
 
-#+RESULTS:
-[[file:images/analytic.png]]
+#+RESULTS: test analytic solution
+: [[0.0009985  0.00063923 0.000444  ]
+:  [0.00790459 0.00507109 0.00352723]
+:  [0.05815162 0.03793618 0.02668305]
+:  [0.24014035 0.1785053  0.13703608]
+:  [0.01636224 0.02905911 0.04061862]]
 
+#+RESULTS: test
+: [[0.0009985  0.00063923 0.000444  ]
+:  [0.00790459 0.00507109 0.00352723]
+:  [0.05815162 0.03793618 0.02668305]
+:  [0.24014035 0.1785053  0.13703608]
+:  [0.01636224 0.02905911 0.04061862]]
 
 #+name: constant beta test
-#+begin_src python :session pbm :results output
-  from scipy.integrate import Radau
-  from scipy.integrate import odeint
+#+begin_src python :session pbm :results output 
+  from scipy.integrate import solve_ivp,Radau
 
-  tau = [0, 0.25, 1.0, 2.0]
-
+  tau = np.array([0,0.25,1,2])
   # initial condition
-  n = 20
+  n = 19
   L = np.zeros(n)
-  L[0] = 1e-1
+  L[0] = 1.5e-1
   for i in range(n-1):
       L[i+1] = L[i]*2**(1/3)
-  # N0 = np.exp(-2*np.power(L,3)/2)-np.exp(-4*np.power(L,3)/2)
-  N0 = constant_kernel(0,L)
-  print(N0)
+  N0 = anal_const_kernel(tau[0],L)
   m00 = np.sum(N0)
   m10 = np.sum(L@N0)
   m20 = np.sum(np.power(L,2)@N0)
@@ -326,44 +328,757 @@ Therefore, the complete eqation is
 
   beta = np.ones((n,n))
 
-  def dydx(y,t):
+  def dydx(t,y):
       return aggregation(y,beta,L)
-
-  result = odeint(dydx,Y0,tau)
-
-  for i in range(len(tau)):
-      plt.scatter(L,result)
-  plt.savefig('images/const.png')
+  sol = solve_ivp(dydx,[tau[0],tau[-1]],Y0,method='Radau',t_eval=tau) 
+  print(sol)
 #+end_src
 
 #+RESULTS: constant beta test
-: Traceback (most recent call last):
-:   File "<stdin>", line 1, in <module>
-:   File "/var/folders/4y/r60ctpmd6cb79y6hfptvf7pr0000gp/T/babel-ThlGyW/python-OVrikx", line 13, in <module>
-:     N0 = constant_kernel(0,L)
-:   File "/var/folders/4y/r60ctpmd6cb79y6hfptvf7pr0000gp/T/babel-ThlGyW/python-BZXYps", line 2, in constant_kernel
-:     N = np.zeros((len(L),len(t)))
-: TypeError: object of type 'int' has no len()
-: 
-: 
+#+begin_example
+message: 'The solver successfully reached the end of the integration interval.'
+     nfev: 40
+     njev: 2
+      nlu: 8
+      sol: None
+   status: 0
+  success: True
+        t: array([0.  , 0.25, 1.  , 2.  ])
+ t_events: None
+        y: array([[3.35795883e-003, 2.65506564e-003, 1.49594214e-003,
+        8.42288078e-004],
+       [6.68201376e-003, 5.28629002e-003, 2.98179466e-003,
+        1.68031225e-003],
+       [1.32294748e-002, 1.04798146e-002, 5.92672629e-003,
+        3.34642130e-003],
+       [2.59291350e-002, 2.05933829e-002, 1.17070738e-002,
+        6.63614695e-003],
+       [4.98045101e-002, 3.97595737e-002, 2.28372120e-002,
+        1.30465133e-002],
+       [9.18922946e-002, 7.41013679e-002, 4.34351165e-002,
+        2.51988920e-002],
+       [1.56525925e-001, 1.28687061e-001, 7.84544252e-002,
+        4.69068758e-002],
+       [2.27736562e-001, 1.94077011e-001, 1.27409479e-001,
+        8.07021302e-002],
+       [2.43833481e-001, 2.21398159e-001, 1.66122623e-001,
+        1.17113670e-001],
+       [1.46083601e-001, 1.47951813e-001, 1.40110977e-001,
+        1.19549668e-001],
+       [3.05599686e-002, 3.86060022e-002, 5.58800596e-002,
+        6.61957139e-002],
+       [9.94772729e-004, 2.57554318e-003, 8.37017455e-003,
+        1.62941829e-002],
+       [9.91545508e-007, 4.62813519e-005, 4.45769217e-004,
+        1.58375162e-003],
+       [9.83164445e-013, 2.64029638e-007, 8.46612238e-006,
+        5.73850689e-005],
+       [9.66612326e-025, 5.34841651e-010, 6.08238941e-008,
+        7.91065347e-007],
+       [9.34339388e-049, 4.38945859e-013, 1.76328994e-010,
+        4.35726235e-009],
+       [8.72990092e-097, 2.70401888e-016, 2.19770045e-013,
+        9.98207508e-012],
+       [7.62111701e-193, 1.70095500e-019, 1.27201418e-016,
+        9.78821607e-015],
+       [0.00000000e+000, 5.26054853e-023, 3.72876432e-020,
+        4.19978067e-018],
+       [9.96630689e-001, 8.86217631e-001, 6.65185900e-001,
+        4.99154748e-001],
+       [7.96993155e-001, 7.36110065e-001, 6.06296378e-001,
+        4.99415286e-001],
+       [7.22869116e-001, 6.94169797e-001, 6.28904895e-001,
+        5.69937144e-001],
+       [7.21350145e-001, 7.21350145e-001, 7.21350145e-001,
+        7.21350145e-001]])
+#+end_example
 
-#+begin_src python :export none :results output
-  import numpy as np
+#+name: graph for constant beta test
+#+begin_src python :session pbm :results link :file images/const_beta.png :exports results 
+  tau = np.array([0,0.25,1,2])
+  xx = np.linspace(0.1,10,300)
+  anal_sol = anal_const_kernel_array(tau,xx)
 
-  def test(t,L):
-      n = t*np.log(L)
-      return n
+  N = sol.y[0:-4,:]
+  M = sol.y[-4:,:]
 
-  L = np.array([1,2,3])
 
-  d = test(0.5,L)
-  dd = test(2,L)
+  plt.close('all')
+  plt.figure(figsize=(5,8))
+  plt.subplot(211)
+  plt.suptitle('Constant Kernel')
+  plt.xscale('log')
+  plt.xlabel('Particle Size')
+  plt.ylabel('Normalized Number')
 
-  a = [[]]
-  print(a)
-  
- #+end_src
+  for i in range(len(tau)):
+      plt.plot(xx,anal_sol[:,i])
+      plt.scatter(L,N[:,i])
 
-#+RESULTS:
-: [[]]
-: [array([0.        , 0.34657359, 0.54930614])]
+  M_norm = np.empty(np.shape(M))
+  for i in range(4):
+      M_norm[i,:] = M[i,:]/M[i,0]
+  tau_anal = np.linspace(tau[0],tau[-1],50)
+  M_anal = np.empty([4,len(tau_anal)])
+  for i in range(4):
+      M_anal[i,:] = np.power(2/(tau_anal+2),1-i/3)
+  plt.subplot(212)
+  plt.xlabel('Time')
+  plt.ylabel('Normalized Moment')
+  for i in range(4):
+      plt.plot(tau_anal,M_anal[i,:])
+      plt.scatter(tau,M_norm[i,:])
+  plt.savefig('images/const_beta.png')
+#+end_src
+
+#+RESULTS: graph for constant beta test
+[[file:images/const_beta.png]]
+
+
+* Tracer Studies of High-Shear Granulation: II. Popultation Balance Modeling
+** Breakage term
+\begin{equation*}
+\frac{\partial n}{\partial t}=\int_v^\infty S(\epsilon)b(v,\epsilon)n(\epsilon)d\epsilon-S(v)n(v)
+\end{equation*}
+where \(S\) is a selection rate constant and \(b\) is a breakage function. Number density function \(n(v)\) gives the number of particles with \(v\in(v,v+dv)\) as \(dN=n(v)dv\).
+*** Discretized breakage birth term
+\begin{equation}
+R_i^{[1]}=\sum_{j=i}^{n}b_{i,j}S_jN_j
+\end{equation}
+where \(S_i\) is the selection rate for interval \(i\) and \(b_{i,j}\) is the number of fragments from \(j\) to \(i\) which occurs in \(1\sim n\)
+*** Discretized breakage death term
+\begin{equation}
+R_i^{[2]}=S_iN_i
+\end{equation}
+which occurs in \(2\sim n\)
+
+*** Discretized selection rate
+The average number of fragments produced by breaking granule of size \(l\) is
+\begin{equation}
+N_b(l)=\int_0^lb(x,l)dx
+\end{equation}
+The overall rate of generation of numbers is
+\begin{equation}
+\begin{aligned}
+R_0&=\int_0^\infty\overline{B}_0^B(l)-\overline{D}_0^B(l)dl\\
+   &=\int_0^\infty\left[N_b(l)-1\right]S(l)n(l)dl
+\end{aligned}
+\end{equation}
+Discrete eqivalent is
+\begin{equation}
+\begin{aligned}
+R_0&=\sum_{i=1}^n(B_i^B-D_i^B)\\
+   &=\sum_{i=2}^n-S_iN_i+\sum_{i=1}^n\sum_{j=i}^nb_{i,j}S_jN_j\\
+   &=\sum_{i=2}^n-S_iN_i+\sum_{j=1}^n\sum_{i=1}^jb_{i,j}S_jN_j\\
+   &=\sum_{i=2}^n-S_iN_i+\sum_{i=1}^n\sum_{j=1}^ib_{j,i}S_iN_i\\
+   &=\sum_{i=1}^nS_iN_i\left(\sum_{j=1}^ib_{j,i}-1\right)+S_1N_1
+\end{aligned}
+\end{equation}
+For the continuous and discrete equations to be equivalent,
+\begin{equation}
+\begin{aligned}
+\int_{l_i}^{l_{i+1}}[N_b(l)-1]S(l)n(l)dl=S_iN_i\left(\sum_{j=1}^ib_{j,i}-1\right)\\
+\int_{l_1}^{l_2}[N_b(l)-1]S(l)n(l)dl=b_{1,1}S_1N_1
+\end{aligned}
+\end{equation}
+Assume the simple relationship,
+\begin{equation}
+n(l)=\frac{N_i}{l_{i+1}-l_i}
+\end{equation}
+then
+\begin{equation}
+S_i=\frac{\frac{1}{l_{i+1}-l_i}\int_{l_i}^{l_{i+1}}\left[N_b(l)-1\right]S(l)dl}{\sum_{j=1}^ib_{j,i}-1}
+\end{equation}
+*** Discretized breakage function
+Consider the movement of particle volume from one interval to another. The rate of generation of volume of fragments from interval \(i\) is
+\begin{equation}
+\int_{l_i}^{l_{i+1}}l^3S(l)n(l)dl
+\end{equation}
+with discretized form of
+\begin{equation}
+\overline{l}_i^3N_iS_i
+\end{equation}
+The number of particles of size \(x\) produced by the breakage of particle of size \(l\) is
+\begin{equation*}
+n(x) = S(l)n(l)b(x,l)
+\end{equation*}
+The volume of particles of size \(x\) is
+\begin{equation*}
+v(x)=x^3S(l)n(l)b(x,l)
+\end{equation*}
+The volume of particles of size in \(j\)th term is
+\begin{equation*}
+v_j=\int_{l_j}^{l_{j+1}}x^3S(l)n(l)b(x,l)dx
+\end{equation*}
+Therefore, fragments arrive in the interval \(j\) from interval \(i\) at a rate
+\begin{equation}
+\begin{aligned}
+R_{j,i}=&\int_{l_i}^{l_{i+1}}\int_{l_j}^{l_{j+1}}x^3S(l)n(l)b(x,l)dxdl\qquad j<i\\
+       =&\int_{l_i}^{l_{i+1}}\int_{l_i}^lx^3S(l)n(l)b(x,l)dxdl\qquad j=i
+\end{aligned}
+\end{equation}
+with discretized form of
+\begin{equation}
+\overline{l}_j^3b_{j,i}N_iS_i
+\end{equation}
+Therefore, volume will be apportioned appropriately to the intervals if
+t
+\begin{equation*}
+\left(\frac{\overline{l}_j}{\overline{l}_i}\right)^3b_{j,i}=&\frac{\int_{l_i}^{l_{i+1}}\int_{l_j}^{l_{j+1}}x^3S(l)n(l)b(x,l)dxdl}{\int_{l_i}^{l_{i+1}}l^3S(l)n(l)dl}
+\end{equation*}
+\begin{equation}
+b_{j,i}\approx\left(\frac{\overline{l}_i}{\overline{l}_j}\right)^3\frac{\int_{l_i}^{l_{i+1}}\int_{l_j}^{l_{j+1}}x^3S(l)b(x,l)dxdl}{\int_{l_i}^{l_{i+1}}l^3S(l)dl}
+\end{equation}
+
+\begin{equation}
+b_{i,i}\approx\frac{\int_{l_i}^{l_{i+1}}\int_{l_i}^lx^3S(l)b(x,l)dxdl}{\int_{l_i}^{l_{i+1}}l^3S(l)dl}
+\end{equation}
+*** Code for breakage
+    #+name: breakage
+    #+begin_src python :session pbm :exports code :results output
+      # Y contains moment terms. Last four elements are moment terms.
+      def breakage(Y,b,S):
+      # S is selection rate
+      # b is breakage function
+          n = len(Y)-4
+          N = Y[0:n]
+          R1 = np.zeros(n)
+          R2 = np.zeros(n)
+
+          # Python index starts with 0!
+          # Mechanism 1 (i=1~n, j=i~n) !!! with index 1~n
+          for i in range(n):
+              sum = 0
+              for j in range(i,n):
+                  sum += b[i][j]*S[j]*N[j]
+              R1[i] = sum
+          # Mechanism 2 (i=2~n)
+          for i in range(1,n):
+              R2[i]=S[i]*N[i]
+
+          dNdt = R1-R2
+          m0 = np.sum(dNdt)
+          m1 = np.sum(L@dNdt)
+          m2 = np.sum(np.power(L,2)@dNdt)
+          m3 = np.sum(np.power(L,3)@dNdt)
+          dydt = np.append(dNdt,[m0,m1,m2,m3])
+          return dydt
+    #+end_src
+
+    #+RESULTS: breakage
+
+*** Testing the breakage
+Testing the model with the selection rate of
+\begin{equation*}
+S(l)=l^3
+\end{equation*}
+and binary breakage funtion that gives uniform probability of all fragment sizes on a volume scale \(b(\epsilon,v)=1/v\)
+\begin{equation*}
+b(x,l)=\frac{6x^2}{l^3}
+\end{equation*}
+These gives
+\begin{equation}
+\begin{aligned}
+b_{j,i}=&\left(\frac{\overline{l}_i}{\overline{l}_j}\right)^3\frac{\int_{l_i}^{l_{i+1}}\int_{l_j}^{l_{j+1}}x^3l^36x^2/l^3dxdl}{\int_{l_i}^{l_{i+1}}l^3l^3dl}\\
+       =&\left(\frac{\overline{l}_i}{\overline{l}_j}\right)^3\frac{(l_{i+1}-l_{i})(l_{j+1}^6-l_j^6)}{\frac{1}{7}(l_{i+1}^7-l_i^7)}\\
+       =&r^{3(j-i)}\frac{7(r-1)(r^6-1)}{r^7-1}=1.35118\times2^{j-i}\\
+b_{i,i}=&\frac{\int_{l_i}^{l_{i+1}}\int_{l_j}^lx^3l^36x^2/l^3dxdl}{\int_{l_i}^{l_{i+1}}l^3l^3dl}=\frac{\frac{1}{7}(l_{i+1}^7-l_i^7)-l_i^6(l_{i+1}-l_i)}{\frac{1}{7}(l_{i+1}^7-l_i^7)}\\
+  =&1-\frac{7(r-1)}{r^7-1}=0.549607
+\end{aligned}
+\end{equation}
+#+name: uniform breakage function
+#+begin_src python :session pbm :results output
+  def uniform_breakage(n):
+      b = np.zeros((n,n))
+      for i in range(n):
+          for j in range(i+1,n):
+              b[i][j]=1.35118*2**(i-j)
+          b[i][i]=0.549607
+      return b
+#+end_src
+
+#+RESULTS: uniform breakage function
+
+#+name: test breakage function
+#+begin_src python :session pbm :results output :exports none
+  n = 5
+  b = uniform_breakage(n)
+  print(b)
+#+end_src
+
+#+RESULTS: test breakage function
+: [[0.549607   0.67559    0.337795   0.1688975  0.08444875]
+:  [0.         0.549607   0.67559    0.337795   0.1688975 ]
+:  [0.         0.         0.549607   0.67559    0.337795  ]
+:  [0.         0.         0.         0.549607   0.67559   ]
+:  [0.         0.         0.         0.         0.549607  ]]
+
+Average number of fragments produced is
+\begin{equation*}
+N_b(l)=\int_0^l6x^2/l^3dx=2
+\end{equation*}
+Therefore
+\begin{equation}
+\begin{aligned}
+S_i=&\frac{\frac{1}{l_{i+1}-l_i}\int_{l_i}^{l_{i+1}}l^3dl}{\sum_{j=1}^ib_{j,i}-1}\\
+   =&\frac{\frac{l_{i+1}^4-l_i^4}{4(l_{i+1}-l_i)}}{\sum_{j=1}^{i-1}1.35118\times2^{j-i}+0.549607-1}\\
+   =&\frac{\frac{l_i^3(r^4-1)}{4(r-1)}}{1.35118\times(1-2^{1-i})-0.450393}\\
+   =&\frac{1.46183}{0.90079-1.35118\times2^{1-i}}l_i^3\qquad(i\geq2)\\
+S_1=&2.65978l_1^3
+\end{aligned}
+\end{equation}
+#+name: selection rate with uniform breakage function
+#+begin_src python :session pbm :results output :exports code
+  def selection_uniform(n,L):
+      S = np.zeros(n)
+      for i in range(1,n):
+          # i is replaced with i+1 because of Python index
+          S[i] = 1.46183/(0.90079-1.35118*2**(1-(i+1)))*L[i]**3
+      S[0] = 2.65978*L[0]**3
+      return S
+
+  def selection_test(n,L):
+      S = np.zeros(n)
+      for i in range(n):
+          S[i] = 1.623*L[i]**3
+      return S
+
+#+end_src
+
+#+RESULTS: selection rate with uniform breakage function
+
+#+name: test of selection rate with uniform breakage funtion
+#+begin_src python :session pbm :results output :exports none
+  S = selection_test(n,L)
+  print(S)
+#+end_src
+
+#+RESULTS: test of selection rate with uniform breakage funtion
+: [5.47762500e-03 1.09552500e-02 2.19105000e-02 4.38210000e-02
+:  8.76420000e-02 1.75284000e-01 3.50568000e-01 7.01136000e-01
+:  1.40227200e+00 2.80454400e+00 5.60908800e+00 1.12181760e+01
+:  2.24363520e+01 4.48727040e+01 8.97454080e+01 1.79490816e+02
+:  3.58981632e+02 7.17963264e+02 1.43592653e+03]
+
+*** Analytic solution for uniform breakage function
+Analytic solution of number density for unform breakage is
+\begin{equation}
+n(t,l)=3l^2(1+t)^2e^{-l^3(1+t)}
+\end{equation}
+Intergration of number density results in number of fragments
+\begin{equation}
+\begin{aligned}
+N_i&=\int_{l_i}^{l_{i+1}}3l^2(1+t)^2e^{-l^3(1+t)}\\
+   &=\left[-(1+t)e^{-l^3(1+t)}\right]_{l_i}^{l_{i+1}}\\
+   &=(1+t)\left[e^{-l_i^3(1+t)}-e^{-2l_i^3(1+t)}\right]
+\end{aligned}
+\end{equation}
+#+name: analytical solution of uniform breakage function
+#+begin_src python :session pbm :results output
+  def anal_uni_break(t,L):
+      L = L.reshape(len(L),1)
+      N = (1+t)*(np.exp(-np.power(L,3)*(1+t))-np.exp(-2*np.power(L,3)*(1+t)))
+      return N
+
+  def anal_uni_break_array(T,L):
+      N = anal_uni_break(T[0],L)
+      for i in range(1,len(T)):
+          N = np.append(N,anal_uni_break(T[i],L),axis=1)
+      return N
+#+end_src
+
+#+RESULTS: analytical solution of uniform breakage function
+
+#+name: test of analytical solution of uniform breakage function
+#+begin_src python :session pbm :results output :exports none
+  ttt = np.array([0,1,2,3])
+  lll = np.array([0.1,0.2])
+  nnn = anal_uni_break_array(ttt,lll)
+  print(nnn)
+#+end_src
+
+#+RESULTS: test of analytical solution of uniform breakage function
+: [[0.0009985  0.00398802 0.00895959 0.0159043 ]
+:  [0.00790459 0.03124148 0.06945577 0.12200633]]
+
+#+name: uniform breakage test
+#+begin_src python :session pbm :results output
+  # initial condition
+  T = np.array([0,0.9,3.5,13.4,100])
+  n = 21
+  L = np.empty(n)
+  L[0] = 0.02
+  for i in range(n-1):
+      L[i+1] = L[i]*2**(1/3)
+  N0 = anal_uni_break(T[0],L)
+  m00 = np.sum(N0)
+  m10 = np.sum(L@N0)
+  m20 = np.sum(np.power(L,2)@N0)
+  m30 = np.sum(np.power(L,3)@N0)
+  Y0=np.append(N0,[m00,m10,m20,m30])
+
+  b = uniform_breakage(n)
+  S = selection_uniform(n,L)
+
+  def dydx(t,y):
+      return breakage(y,b,S)
+
+  sol2 = solve_ivp(dydx,[T[0],T[-1]],Y0,method='Radau',t_eval=T)
+  print(sol2)
+#+end_src
+
+#+RESULTS: uniform breakage test
+#+begin_example
+message: 'The solver successfully reached the end of the integration interval.'
+     nfev: 239
+     njev: 2
+      nlu: 38
+      sol: None
+   status: 0
+  success: True
+        t: array([  0. ,   0.9,   3.5,  13.4, 100. ])
+ t_events: None
+        y: array([[ 7.99990400e-06,  3.12869552e-05,  1.82814110e-04,
+         1.90745440e-03,  9.52972646e-02],
+       [ 1.59996160e-05,  6.25671365e-05,  3.65521586e-04,
+         3.81128741e-03,  1.89328691e-01],
+       [ 3.19984640e-05,  1.25126691e-04,  7.30932224e-04,
+         7.61882717e-03,  3.77352169e-01],
+       [ 6.39938563e-05,  2.50224773e-04,  1.46144848e-03,
+         1.52236163e-02,  7.49834641e-01],
+       [ 1.27975426e-04,  5.00343172e-04,  2.92136377e-03,
+         3.03955707e-02,  1.48189317e+00],
+       [ 2.55901716e-04,  1.00027618e-03,  5.83684524e-03,
+         6.05933542e-02,  2.89679083e+00],
+       [ 5.11606941e-04,  1.99894186e-03,  1.16506687e-02,
+         1.20415487e-01,  5.54025750e+00],
+       [ 1.02242839e-03,  3.99150686e-03,  2.32104553e-02,
+         2.37807970e-01,  1.01458768e+01],
+       [ 2.04171855e-03,  7.95768289e-03,  4.60614427e-02,
+         4.63824798e-01,  1.70554246e+01],
+       [ 4.07091417e-03,  1.58147746e-02,  9.07063094e-02,
+         8.82452501e-01,  2.42729232e+01],
+       [ 8.09197528e-03,  3.12316573e-02,  1.75891878e-01,
+         1.59816038e+00,  2.52111655e+01],
+       [ 1.59864331e-02,  6.09043070e-02,  3.30777130e-01,
+         2.62672182e+00,  1.48607589e+01],
+       [ 3.11977248e-02,  1.15819455e-01,  5.85390277e-01,
+         3.57760272e+00,  3.39860803e+00],
+       [ 5.94107128e-02,  2.09522282e-01,  9.19627517e-01,
+         3.42382094e+00,  1.72628508e-01],
+       [ 1.07754395e-01,  3.43495525e-01,  1.14874280e+00,
+         1.75037665e+00,  6.93865847e-04],
+       [ 1.77423520e-01,  4.65048124e-01,  9.38098175e-01,
+         3.18194331e-01,  2.23675422e-08],
+       [ 2.41540286e-01,  4.38528560e-01,  3.65461275e-01,
+         1.11674291e-02,  1.77528491e-16],
+       [ 2.27630734e-01,  2.15985703e-01,  4.28573354e-02,
+         2.28723048e-05,  1.78726851e-25],
+       [ 1.07724446e-01,  3.57782075e-02,  7.19206275e-04,
+         1.98819275e-10, -6.58089264e-28],
+       [ 1.48537917e-02,  9.81627043e-04,  3.45879993e-07,
+         7.02017535e-19,  1.14794097e-28],
+       [ 2.27391929e-04,  9.26554966e-07,  2.59807890e-13,
+        -2.46187954e-25,  9.78207045e-29],
+       [ 9.99991948e-01,  1.94902911e+00,  4.69069374e+00,
+         1.51301180e+01,  1.06448834e+02],
+       [ 7.97324343e-01,  1.24004080e+00,  2.22487034e+00,
+         4.85641560e+00,  1.78368568e+01],
+       [ 7.22900485e-01,  9.00056266e-01,  1.20501789e+00,
+         1.78016200e+00,  3.41156650e+00],
+       [ 7.21348541e-01,  7.21348918e-01,  7.21349423e-01,
+         7.21350094e-01,  7.21350973e-01]])
+#+end_example
+
+#+name: graph of uniform breakage test
+#+begin_src python :session pbm :results link :file images/uniform_breakage.png :exports results
+  xx = np.linspace(L[0],L[-1],300)
+  anal_sol = anal_uni_break_array(T,xx)
+
+  N = sol2.y[0:-4,:]
+  M = sol2.y[-4:,:]
+
+  rows = len(T)
+  plt.close('all')
+  fig, axes = plt.subplots(rows+1,1,figsize=(5,10))
+  for i in range(rows):
+      axes[i].plot(xx,anal_sol[:,i])
+      axes[i].scatter(L,N[:,i])
+      axes[i].set_xscale('log')
+      axes[i].set_xlim([L[0],L[-1]])
+      axes[i].title.set_text('t={0}'.format(T[i]))
+  M_norm = np.empty(np.shape(M))
+  for i in range(4):
+      M_norm[i,:] = M[i,:]/M[i,0]
+  axes[rows].plot(T,M_norm[-1,:])
+  axes[rows].title.set_text('Third Moment')
+  axes[rows].set_ylim([0.99,1.01])
+  fig.tight_layout()
+  plt.savefig('images/uniform_breakage.png')
+#+end_src
+
+#+RESULTS: graph of uniform breakage test
+[[file:images/uniform_breakage.png]]
+
+*** Numerical calculation of breakage function
+    #+name: numerical calculation of breakage matrix
+    #+begin_src python :session pbm :results output
+      from scipy.integrate import quad,dblquad
+
+      def breakage_mat(n,b,S,L):
+          L = np.append(L,L[-1]*2**(1/3))
+          break_mat = np.zeros((n,n))
+          def num_func(x,y):
+              return x**3*S(y)*b(x,y)
+          def den_func(x):
+              return x**3*S(x)
+          for i in range(n):
+              den,err = quad(den_func,L[i],L[i+1])
+              for j in range(i):
+                  num,err = dblquad(num_func,L[i],L[i+1],lambda x: L[j],lambda x: L[j+1])
+                  break_mat[j][i] = (L[i]/L[j])**3*num/den
+              num,err = dblquad(num_func,L[i],L[i+1],lambda x: L[i],lambda x: x)
+              break_mat[i][i] = num/den
+
+          return break_mat
+    #+end_src
+
+    #+RESULTS: numerical calculation of breakage matrix
+    
+    #+name: test of numerical breakage matrix 
+    #+begin_src python :session pbm :results output :exports none
+      def b(x,y):
+          return 6*x**2/y**3
+      def S(x):
+          return x**3
+
+      n = 5
+      L = np.empty(n)
+      L[0] = 0.1
+      for i in range(n-1):
+          L[i+1] = L[i]*2**(1/3)
+
+      break_mat = breakage_mat(n,b,S,L)
+
+      print(break_mat)
+    #+end_src
+
+    #+RESULTS: test of numerical breakage matrix
+    : [[0.54960654 0.67559019 0.3377951  0.16889755 0.08444877]
+    :  [0.         0.54960654 0.67559019 0.3377951  0.16889755]
+    :  [0.         0.         0.54960654 0.67559019 0.3377951 ]
+    :  [0.         0.         0.         0.54960654 0.67559019]
+    :  [0.         0.         0.         0.         0.54960654]]
+
+*** Numerical calculatin of selection rate
+    #+name: numerical calculation of selection rate
+    #+begin_src python :session pbm :results output
+      def N_b(b,y):
+          N_b,err = quad(lambda x:b(x,y),0,y)
+          return N_b
+
+      def selection_rate(n,S,N_b,L,b,break_mat):
+          SR = np.empty(n)
+          L = np.append(L,L[-1]*2**(1/3))
+          def integrand(y):
+              int = (N_b(b,y)-1)*S(y)
+              return int
+
+          for i in range(1,n):
+              integ,err = quad(integrand,L[i],L[i+1])
+              num = integ/(L[i+1]-L[i])
+              sum = 0
+              for j in range(i+1):
+                  sum += break_mat[j][i]
+              den = sum-1
+              SR[i] = num/den
+          integ,err = quad(integrand,L[0],L[1])
+          SR[0] = integ/(L[1]-L[0])/break_mat[0][0]
+
+          return SR
+    #+end_src
+
+    #+RESULTS: numerical calculation of selection rate
+
+    #+name: test of numerical calculation of selection rate
+    #+begin_src python :session pbm :results output :exports none
+      ss = selection_rate(n,S,N_b,L,b,break_mat)
+      print(ss)
+      print(selection_uniform(n,L))
+      print(selection_test(n,L))
+    #+end_src
+
+    #+RESULTS: test of numerical calculation of selection rate
+    : [0.00265978 0.0129827  0.01038616 0.0159787  0.02865147]
+    : [0.00265978 0.0129825  0.0103861  0.01597863 0.02865135]
+    : [0.001623 0.003246 0.006492 0.012984 0.025968]
+
+    #+name: test with numerical selection and breakage
+    #+begin_src python :session pbm :results output :exports none
+      def b(x,y):
+          return 6*x**2/y**3
+      def S(x):
+          return x**3
+
+      # initial condition
+      T = np.array([0,0.9,3.5,13.4,100])
+      n = 21
+      L = np.empty(n)
+      L[0] = 0.02
+      for i in range(n-1):
+          L[i+1] = L[i]*2**(1/3)
+      N0 = anal_uni_break(T[0],L)
+      m00 = np.sum(N0)
+      m10 = np.sum(L@N0)
+      m20 = np.sum(np.power(L,2)@N0)
+      m30 = np.sum(np.power(L,3)@N0)
+      Y0=np.append(N0,[m00,m10,m20,m30])
+
+      break_mat = breakage_mat(n,b,S,L)
+      SR = selection_rate(n,S,N_b,L,b,break_mat)
+
+      def dydx(t,y):
+          return breakage(y,break_mat,SR)
+
+      sol3 = solve_ivp(dydx,[T[0],T[-1]],Y0,method='Radau',t_eval=T)
+      print(sol)
+    #+end_src
+
+    #+RESULTS: test with numerical selection and breakage
+    #+begin_example
+    message: 'The solver successfully reached the end of the integration interval.'
+         nfev: 239
+         njev: 2
+          nlu: 38
+          sol: None
+       status: 0
+      success: True
+            t: array([  0. ,   0.9,   3.5,  13.4, 100. ])
+     t_events: None
+            y: array([[ 7.99990400e-06,  3.12869552e-05,  1.82814110e-04,
+             1.90745440e-03,  9.52972646e-02],
+           [ 1.59996160e-05,  6.25671365e-05,  3.65521586e-04,
+             3.81128741e-03,  1.89328691e-01],
+           [ 3.19984640e-05,  1.25126691e-04,  7.30932224e-04,
+             7.61882717e-03,  3.77352169e-01],
+           [ 6.39938563e-05,  2.50224773e-04,  1.46144848e-03,
+             1.52236163e-02,  7.49834641e-01],
+           [ 1.27975426e-04,  5.00343172e-04,  2.92136377e-03,
+             3.03955707e-02,  1.48189317e+00],
+           [ 2.55901716e-04,  1.00027618e-03,  5.83684524e-03,
+             6.05933542e-02,  2.89679083e+00],
+           [ 5.11606941e-04,  1.99894186e-03,  1.16506687e-02,
+             1.20415487e-01,  5.54025750e+00],
+           [ 1.02242839e-03,  3.99150686e-03,  2.32104553e-02,
+             2.37807970e-01,  1.01458768e+01],
+           [ 2.04171855e-03,  7.95768289e-03,  4.60614427e-02,
+             4.63824798e-01,  1.70554246e+01],
+           [ 4.07091417e-03,  1.58147746e-02,  9.07063094e-02,
+             8.82452501e-01,  2.42729232e+01],
+           [ 8.09197528e-03,  3.12316573e-02,  1.75891878e-01,
+             1.59816038e+00,  2.52111655e+01],
+           [ 1.59864331e-02,  6.09043070e-02,  3.30777130e-01,
+             2.62672182e+00,  1.48607589e+01],
+           [ 3.11977248e-02,  1.15819455e-01,  5.85390277e-01,
+             3.57760272e+00,  3.39860803e+00],
+           [ 5.94107128e-02,  2.09522282e-01,  9.19627517e-01,
+             3.42382094e+00,  1.72628508e-01],
+           [ 1.07754395e-01,  3.43495525e-01,  1.14874280e+00,
+             1.75037665e+00,  6.93865847e-04],
+           [ 1.77423520e-01,  4.65048124e-01,  9.38098175e-01,
+             3.18194331e-01,  2.23675422e-08],
+           [ 2.41540286e-01,  4.38528560e-01,  3.65461275e-01,
+             1.11674291e-02,  1.77528491e-16],
+           [ 2.27630734e-01,  2.15985703e-01,  4.28573354e-02,
+             2.28723048e-05,  1.78726851e-25],
+           [ 1.07724446e-01,  3.57782075e-02,  7.19206275e-04,
+             1.98819275e-10, -6.58089264e-28],
+           [ 1.48537917e-02,  9.81627043e-04,  3.45879993e-07,
+             7.02017535e-19,  1.14794097e-28],
+           [ 2.27391929e-04,  9.26554966e-07,  2.59807890e-13,
+            -2.46187954e-25,  9.78207045e-29],
+           [ 9.99991948e-01,  1.94902911e+00,  4.69069374e+00,
+             1.51301180e+01,  1.06448834e+02],
+           [ 7.97324343e-01,  1.24004080e+00,  2.22487034e+00,
+             4.85641560e+00,  1.78368568e+01],
+           [ 7.22900485e-01,  9.00056266e-01,  1.20501789e+00,
+             1.78016200e+00,  3.41156650e+00],
+           [ 7.21348541e-01,  7.21348918e-01,  7.21349423e-01,
+             7.21350094e-01,  7.21350973e-01]])
+    #+end_example
+
+#+name: graph of numerical calculatino of uniform breakage test
+#+begin_src python :session pbm :results output :exports none
+  xx = np.linspace(L[0],L[-1],300)
+  anal_sol = anal_uni_break_array(T,xx)
+
+  N = sol3.y[0:-4,:]
+  M = sol3.y[-4:,:]
+
+  rows = len(T)
+  plt.close('all')
+  fig, axes = plt.subplots(rows+1,1,figsize=(5,10))
+  for i in range(rows):
+      axes[i].plot(xx,anal_sol[:,i])
+      axes[i].scatter(L,N[:,i])
+      axes[i].set_xscale('log')
+      axes[i].set_xlim([L[0],L[-1]])
+      axes[i].title.set_text('t={0}'.format(T[i]))
+  M_norm = np.empty(np.shape(M))
+  for i in range(4):
+      M_norm[i,:] = M[i,:]/M[i,0]
+  axes[rows].plot(T,M_norm[-1,:])
+  axes[rows].title.set_text('Third Moment')
+  axes[rows].set_ylim([2,0])
+  fig.tight_layout()
+  fig.show()
+#+end_src
+
+#+RESULTS: graph of numerical calculatino of uniform breakage test
+
+*** Log-normal distribution of breakage function
+Deconvolution of particle size distribution (PSD) of activted sludge shows clear modes of log-normal distribution. Breakage funtion with mass geometric mean size \(\overline{l}_{gv}\) and geometric standard deviation \(\sigma_{g}\) is
+\begin{equation}
+b(x,l)=\left(\frac{l}{x}\right)^3\frac{\frac{1}{x\sqrt{\pi/2}\ln\sigma_g}\exp\left[-\left(\frac{\ln x/\overline{l}_{gv}}{\sqrt{2}\ln\sigma_g}\right)^2\right]}{1+\text{erf}\left[\frac{\ln l/\overline{l}_{gv}}{\sqrt{2}\ln\sigma_g}\right]}
+\end{equation}
+#+name: log normal breakage function
+#+begin_src python :session pbm :results output 
+  from scipy.special import erf
+
+  def logerf(l,lgv,sg):
+      return erf(np.log(l/lgv)/(np.sqrt(2)*np.log(sg)))
+
+  def lognorm_b(x,l,lgv,sg):
+      num = np.exp(-(np.log(x/lgv)/(np.sqrt(2)*np.log(sg)))**2)
+      num /= (x*np.sqrt(np.pi/2)*np.log(sg))
+      den = 1+logerf(l,lgv,sg)
+      return (l/x)**3*num/den
+#+end_src
+
+#+name: test of log normal breakage function
+#+begin_src python :session pbm :results output :exports none
+  lgv = 300
+  sg = 1.70
+  ll = 50
+  x = np.linspace(1,ll,1000)
+  y = lognorm_b(x,ll,lgv,sg)
+  def uniform_b(x,l):
+      return 6*x**2/l**3
+
+  def integrand_uniform(x):
+      return uniform_b(x,ll)
+  area_uniform,err = quad(integrand_uniform,x[0],x[-1])
+  print('Particle number by uniform is {0:1.4f}'.format(area_uniform))
+
+  def integrand(x):
+      return lognorm_b(x,ll,lgv,sg)
+  area,err = quad(integrand,x[0],x[-1])
+  print('Particle number by lognorm is {0:1.4f}'.format(area))
+#+end_src
+
+#+RESULTS: test of log normal breakage function
+: Particle number by uniform is 2.0000
+: Particle number by lognorm is 1.6645
+
+#+RESULTS: log normal breakage function
+
