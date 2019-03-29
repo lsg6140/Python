@@ -8,7 +8,35 @@ The population balance for a well-mixed batch system of constant volume is given
 \end{equation}
 \(n\) is the number-density function: If there are $dN$ particles per unit volume of suspension in the size range $L$ to $dL$, then at that size and time the density function is $n=dN/dL$. 
 *** Aggregation
-Birth rate by aggregation
+The fraction of particle pairs of state \(x\) and \(x'\) aggregating per unit of time is
+\begin{equation}
+\beta(x;x',t)
+\end{equation}
+The average number of particle pairs at time \(t\) per unit volume in state space located at \(x\) and \(x'\) called pair density function is
+\begin{equation}
+f_2(x;x',t)
+\end{equation}
+The state of a particle needed to form a new particle at \(x\) in aggregation with a particle \(x'\) is
+\begin{equation}
+\tilde{x}(x|x')
+\end{equation}
+The sink term \(D\) (aggregation death) is 
+\begin{equation}
+D_{agg}(x,t) = \int_{\Omega_x}dV_{x'}\beta(x;x')f_2(x;x',t)
+\end{equation}
+The source term \(B\) (aggregation birth) is
+\begin{equation}
+B_{agg}(x,t)=\int_{\Omega_x}dV_{x'}\frac{1}{\delta}\beta(\tilde{x};x')f_2(\tilde{x};x',t)\left\lvert\frac{\partial\tilde{x}}{\partial x}\right\rvert
+\end{equation}
+where \(\delta\) is the number of times identical pairs have been considered to remove redundancy and \(\left\lvert\frac{\partial\tilde{x}}{\partial x}\right\rvert\) is the Jacobian of the transformation while \(x'\) is held constant. 
+The Jacobian is necessary for the change of variables in integral. (Study needs)\\
+Since the pair density function \(f_2\) is not known, closure approximation is necessary to close the population balance equations. The coarsest form of closure hypothesis with no statistical correlation between particles is
+\begin{equation}
+f_2(x';x)=f_1(x')f_1(x)
+\end{equation}
+with \(f_1\) as the number density function.\\
+
+Birth rate by aggregation with the coarsest form of closure hypothesis is
 \begin{align}
 B'(v)&=\frac{1}{2}\int_0^v\beta'(v-\epsilon,\epsilon)n'(v-\epsilon)n'(\epsilon)d\epsilon\\
 D'(v)&=n'(v)\int_0^\infty\beta'(v,\epsilon)n'(\epsilon)d\epsilon
@@ -202,15 +230,12 @@ Therefore, the complete eqation is
 
     #+name: aggregation
     #+begin_src python :session pbm :exports code :results output
-      # Y contains moment terms. Last four elements are moment terms.
-      def aggregation(Y,beta,L):
-          n = len(Y)-4
-          N = Y[0:n]
+      def aggregation(N,beta):
+          n = len(N)
           R1 = np.zeros(n)
           R2 = np.zeros(n)
           R3 = np.zeros(n)
           R4 = np.zeros(n)
-
           # Python index starts with 0!
           # Mechanism 1 (i=3~n, j=1~i-2) !!! with index 1~n
           for i in range(2,n):
@@ -237,6 +262,15 @@ Therefore, the complete eqation is
               R4[i] = N[i]*sum
 
           dNdt = R1+R2-R3-R4
+
+          return dNdt
+
+      def aggregation_moment(Y,beta):
+          n = len(Y)-4
+          N = Y[0:n]
+
+          dNdt = aggregation(N,beta)
+
           m0 = np.sum(dNdt)
           m1 = np.sum(L@dNdt)
           m2 = np.sum(np.power(L,2)@dNdt)
@@ -318,7 +352,7 @@ Therefore, the complete eqation is
   beta = np.ones((n,n))
 
   def dydx(t,y):
-      return aggregation(y,beta,L)
+      return aggregation_moment(y,beta)
   sol = solve_ivp(dydx,[tau[0],tau[-1]],Y0,method='Radau',t_eval=tau) 
   print(sol)
 #+end_src
@@ -524,12 +558,10 @@ b_{i,i}\approx\frac{\int_{l_i}^{l_{i+1}}\int_{l_i}^lx^3S(l)b(x,l)dxdl}{\int_{l_i
 *** Code for breakage
     #+name: breakage
     #+begin_src python :session pbm :exports code :results output
-      # Y contains moment terms. Last four elements are moment terms.
-      def breakage(Y,b,S):
+      def breakage(N,b,S):
       # S is selection rate
       # b is breakage function
-          n = len(Y)-4
-          N = Y[0:n]
+          n = len(N)
           R1 = np.zeros(n)
           R2 = np.zeros(n)
 
@@ -543,8 +575,14 @@ b_{i,i}\approx\frac{\int_{l_i}^{l_{i+1}}\int_{l_i}^lx^3S(l)b(x,l)dxdl}{\int_{l_i
           # Mechanism 2 (i=2~n)
           for i in range(1,n):
               R2[i]=S[i]*N[i]
-
           dNdt = R1-R2
+          return dNdt
+
+      def breakage_moment(Y,b,S):
+          n = len(Y)-4
+          N = Y[0:n]
+
+          dNdt = breakage(N,b,S)
           m0 = np.sum(dNdt)
           m1 = np.sum(L@dNdt)
           m2 = np.sum(np.power(L,2)@dNdt)
@@ -702,7 +740,7 @@ N_i&=\int_{l_i}^{l_{i+1}}3l^2(1+t)^2e^{-l^3(1+t)}\\
   S = selection_uniform(n,L)
 
   def dydx(t,y):
-      return breakage(y,b,S)
+      return breakage_moment(y,b,S)
 
   sol2 = solve_ivp(dydx,[T[0],T[-1]],Y0,method='Radau',t_eval=T)
   print(sol2)
@@ -1122,9 +1160,22 @@ message: 'The solver successfully reached the end of the integration interval.'
 #+RESULTS: graph of numerical calculatino of uniform breakage test
 
 *** Log-normal distribution of breakage function
+The probability distribution of volume of particle size of \(x\) produced by the breakage of particle size of \(l\) is \(P(x|l)\). Then
+\begin{equation} \label{eq:prob}
+\int_0^lP(x|l)dx=1
+\end{equation}
+This means sum of all particles' volume is same with the volume of original particle. Assuming that volume of original particle \(l^3\) and that of broken particle \(x^\) the breakage function which is the number of particles produced by the breakage of original particle is
+\begin{equation}
+b(x,l)=\left(\frac{l}{x}\right)^3P(x|l)
+\end{equation}
+For mass or volume conservation, sum of all particle volumes generated by a particle of size \(l\) should be \(l^3\). That is
+\begin{equation}
+\int_0^lx^3b(x,l)dx=l^3
+\end{equation}
+which is just equivalent with eq. \ref{eq:prob}.\\
 Deconvolution of particle size distribution (PSD) of activted sludge shows clear modes of log-normal distribution. Breakage funtion with mass geometric mean size \(\overline{l}_{gv}\) and geometric standard deviation \(\sigma_{g}\) is
 \begin{equation}
-b(x,l)=\left(\frac{l}{x}\right)^3\frac{\frac{1}{x\sqrt{\pi/2}\ln\sigma_g}\exp\left[-\left(\frac{\ln x/\overline{l}_{gv}}{\sqrt{2}\ln\sigma_g}\right)^2\right]}{1+\text{erf}\left[\frac{\ln l/\overline{l}_{gv}}{\sqrt{2}\ln\sigma_g}\right]}
+b(x,l)=\left(\frac{l}{x}\right)^3\frac{\frac{1}{x\sqrt{2\pi}\ln\sigma_g}\exp\left[-\left(\frac{\ln x/\overline{l}_{gv}}{\sqrt{2}\ln\sigma_g}\right)^2\right]}{\frac{1}{2}\left(1+\text{erf}\left[\frac{\ln l/\overline{l}_{gv}}{\sqrt{2}\ln\sigma_g}\right]\right)}
 \end{equation}
 #+name: log normal breakage function
 #+begin_src python :session pbm :results output 
@@ -1137,13 +1188,69 @@ b(x,l)=\left(\frac{l}{x}\right)^3\frac{\frac{1}{x\sqrt{\pi/2}\ln\sigma_g}\exp\le
   def lognorm_b(x,l,lgv,sg):
       assert sg > 1, "standard deviation must be larger than 1"
       num = np.exp(-(np.log(x/lgv)/(np.sqrt(2)*np.log(sg)))**2)
-      num /= (x*np.sqrt(np.pi/2)*np.log(sg))
-      den = 1+logerf(l,lgv,sg)
-      # In case 'l' is too small compared to 'lgv', zero 'den' can be produced
+      num /= (x*np.sqrt(2*np.pi)*np.log(sg))
+      den = (1+logerf(l,lgv,sg))/2
+      # In case 'l' is too small compared to 'lgv', 'den' can be numerically zero if it is smaller than the machine precision epsilon which is not correct theoretically
       if den == 0:
           den = np.finfo(float).eps
       return (l/x)**3*num/den
 #+end_src
+
+#+name: test of mass conservation
+#+begin_src python :session pbm :results output :exports none
+  def prob_dist(x,l,lgv,sg):
+      num = np.exp(-(np.log(x/lgv)/(np.sqrt(2)*np.log(sg)))**2)
+      num /= (x*np.sqrt(np.pi/2)*np.log(sg))
+      den = 1+logerf(l,lgv,sg)
+      if den == 0:
+          den = np.finfo(float).eps
+      return num/den
+
+  llgv = 1
+  ssg = 2
+  ll = 2.5
+
+  def integ1(x):
+      return prob_dist(x,ll,llgv,ssg)
+  sum1,err = quad(integ1,0,l)
+  print('Integral of prob dist should be 1. Result is {0}'.format(sum1))
+
+  def integ(x):
+      return x**3*lognorm_b(x,ll,llgv,ssg)
+  eps = np.finfo(float).eps
+  sum2,err = quad(integ,0,l)
+  print('Difference should be zero. Result is {0}'.format(sum2-l**3))
+  print(np.log(0))  
+
+  def log_norm(x,mu,sigma):
+      num = np.exp(-(np.log(x)-mu)**2/(2*sigma**2))
+      den = x*sigma*np.sqrt(2*np.pi)
+      return num/den
+
+  lll = 10
+  m = 3
+  mode = 2.5
+  v = np.array([1.5,2,2.5,3])
+  mu = np.log(mode)+np.log(1+v/m**2)
+  sig = np.sqrt(np.log(1+v/m**2))
+  xxx = np.linspace(3e-1,lll,1000)
+  plt.close('all')
+  for i in range(4):
+      yyy = log_norm(xxx,mu[i],sig[i])
+      plt.plot(xxx,yyy)
+  #yyy = log_norm(xxx,mu,sig)
+  #plt.close('all')
+  #plt.plot(xxx,yyy)
+  plt.xscale('log')
+  # plt.xlim([0.1,1])
+  plt.show()
+
+#+end_src
+
+#+RESULTS: test of mass conservation
+: Integral of prob dist should be 1. Result is 1.0000000000002653
+: Difference should be zero. Result is 4.1460168631601846e-12
+: -inf
 
 #+name: test of log normal breakage function
 #+begin_src python :session pbm :results output :exports none
@@ -1444,3 +1551,11 @@ message: 'The solver successfully reached the end of the integration interval.'
 
 #+RESULTS: graph of log normal breakage test
 [[file:images/lognormal.png]]
+
+* Parameter estimation
+** Test with aggregation
+For aggregation example, \(\beta\) is the controllable parameter. Estimation of parameter is done by minimizing the chi-square,
+\begin{equation}
+\chi^2(\boldsymbol{p})=\sum_i\sum_k\left\{\frac{\left[N_i(t_k)-\tilde{N}_i(t_k,\boldsymbol{p})\right]^2}{\sigma_{i,k}^2}\right\}
+\end{equation}
+The best estimation of the variance is that the error in each value of \(N_i\) scales as \(\overline{l}_i^{-3}\) giving constant relative error in mass in each interval.
