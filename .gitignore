@@ -9,3 +9,5 @@ PBM.pdf
 auto/
 images/*
 .#*
+.Python
+.DS_Store
