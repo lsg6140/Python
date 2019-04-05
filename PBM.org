@@ -1559,3 +1559,70 @@ For aggregation example, \(\beta\) is the controllable parameter. Estimation of 
 \chi^2(\boldsymbol{p})=\sum_i\sum_k\left\{\frac{\left[N_i(t_k)-\tilde{N}_i(t_k,\boldsymbol{p})\right]^2}{\sigma_{i,k}^2}\right\}
 \end{equation}
 The best estimation of the variance is that the error in each value of \(N_i\) scales as \(\overline{l}_i^{-3}\) giving constant relative error in mass in each interval.
+
+** Non-linear least square problems
+Given a vector function \(f:\mathbb{R}^n\to\mathbb{R}^m\) with \(n\leq m\), the purpose is to minimize \(\lVert f(x)\rVert\) or to find
+\begin{equation}
+x^*=\arg\min_xF(x)
+\end{equation}
+where
+\begin{equation}
+F(x)=\frac{1}{2}\sum_{i=1}^mf_i(x)^2=\frac{1}{2}\lVert f(x)\rVert^2=\frac{1}{2}f(x)^\top f(x)
+\end{equation}
+The Taylor expansion of \(f\) is 
+\begin{equation}
+f(x+h)=f(x)+J(x)h+\mathcal{O}(\lVert h\rVert^2)
+\end{equation}
+where \(J\in \mathbb{R}^{m\times n}\) is the Jabobian matrix as
+\begin{equation}
+J(x)_{ij}=\frac{\partial f_i}{\partial x_j}(x)
+\end{equation}
+Derivative of \(F\) is
+\begin{equation}
+\frac{\partial F}{\partial x_j}(x)=\sum_{i=1}^m f_i(x)\frac{\partial f_i}{\partial x_j}(x)
+\end{equation}
+or
+\begin{equation}
+F'(x)=J(x)^\top f(x)
+\end{equation}
+Second derivative of \(F\) is
+\begin{equation}
+\frac{\partial^2F}{\partial x_j\partial x_k}=\sum_{i=1}^m\left(\frac{\partial f_i}{\partial x_j}\frac{\partial f_i}{\partial x_k}+f_i\frac{\partial^2f_i}{\partial x_j\partial x_k}\right)
+\end{equation}
+or
+\begin{equation}
+F''(x)=J(x)^\top J(x)+\sum_{i=1}^m f_i(x)f_i''(x)
+\end{equation}
+*** Gauss-Newton method
+The Gauss-Newton (GN) method is based on a linear approximation to the component of \(f\) in the neighborhood of \(x\). For small \(h\) from the Taylor expansion
+\begin{equation}
+f(x+h)\backsimeq\ell(h)\equiv f(x)+J(x)h
+\end{equation}
+and
+\begin{equation}
+\begin{split}
+F(x+h)\backsimeq L(x)\equiv& \frac{1}{2}\ell(h)^\top\ell(h)\\
+                      =&\frac{1}{2}f^\top f+h^\top J^\top f+\frac{1}{2}h^\top J^\top Jh\\
+                      =&F(x)+h^\top J\top f+\frac{1}{2}h^\top J^\top Jh
+\end{split}
+\end{equation}
+The GN step \(h_{gn}\) minimizes \(L(h)\),
+\begin{equation}
+h_{gn}=\arg\min_hL(h)
+\end{equation}
+The gradient of \(L\) is
+\begin{equation}
+L'(h)=J^\top f+J^\top Jh
+\end{equation}
+The Hessian of \(L\) is
+\begin{equation}
+L''(h)=J^\top J
+\end{equation}
+The matrix \(L''\) is independent of \(h\) and if \(J\) has full rank, then \(L''\) is positive definite. This implies that \(L(h)\) has a unique minimizer, which can be found by solving
+\begin{eqution}
+(J^\top J)h_{gn}=-J^\top f
+\end{eqution}
+This is descent direction since
+\begin{equation}
+h_{gn}^\top F'(x)=h_{gn}^\top(J^\top f)=-h_{gn}^\top J^\top Jh_{gn}<0
+\end{equation}
