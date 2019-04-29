@@ -1559,6 +1559,83 @@ For aggregation example, \(\beta\) is the controllable parameter. Estimation of 
 \chi^2(\boldsymbol{p})=\sum_i\sum_k\left\{\frac{\left[N_i(t_k)-\tilde{N}_i(t_k,\boldsymbol{p})\right]^2}{\sigma_{i,k}^2}\right\}
 \end{equation}
 The best estimation of the variance is that the error in each value of \(N_i\) scales as \(\overline{l}_i^{-3}\) giving constant relative error in mass in each interval.
+** The Objective Function
+For the mathematical model
+\begin{equation}
+y=f(x,k)
+\end{equation}
+with \(\text{dim}(y)=1\times m\), \(\text{dim}(x)=1\times n\), and \(\text{dim}(k)=1\times p\), a single experiment consists of the measurement of each of the \(m\) response variables for a given set of values of the \(n\) independent variables. For each experiment, the measured output vector which can be viewed as a random variable is comprised of the deterministic part calculated from the model and the stochastic part represented by the error term
+\begin{equation}
+\hat{y}_i=f(x_i,k)+\epsilon_i;~~i=1,2,\cdots,N
+\end{equation}
+The unkown parameters are found by minimizing a scalar function referred to as the objective function which is a suitable measure of the overall departure of the model calculated values from the measurements. Residual is departure of measurement from the model calcuated value
+\begin{equation}
+e=\hat{y}-f(x,k)
+\end{equation}
+The error term \(\epsilon_i\) corresponds to the true parameter values, whereas the residual term \(e_i\) corresponds to the estimated parameter values.
+*** Explicit Estimation
+The parameters can be obtained by minimizing the least squares (LS) objective function as the weighted sum of squares of the residuals with \(N\) measurements
+\begin{equation}
+S_{LS}(k)=\sum_{i=1}^N e_i^\top Q_ie_i=\sum_{i=1}^N[\hat{y}_i-f(x_i,k)]^\top Q_i[\hat{y}_i-f(x_i,k)]
+\end{equation}
+where \(Q_i\) is an \(m\times m\) user-supplied weighting matrix.
+**** Simple Least Squares (LS) Estimation
+In this case, we minimize the sum of squares of errors (SSE) with \(Q=I\).
+**** Weighted Least Squares (WLS) Estimation
+In this case, we minimize the SSE with constant weights, \(Q_i=Q\).
+**** Generalized Least Squares (GLS) Estimation
+In this case, we minimize the SSE with non-constant weights. Practical guidelines for the selection of \(Q\) can be derived from maximum likelihood (ML) considerations.
+**** Maximum Likelihood (ML) Estimation
+It is reasonable to assume that the measured responses from the \(i^{th}\) experiment are normally ditrubuted. The joint probability density function conditional on the value of the parameters is
+\begin{equation} 
+\(p(\hat{y}_i|k,\Sigma_i)\sim \det(\Sigma_i)^{-1/2}\exp\left\{-\frac{e_i^\top\Sigma_i^{-1}e_i}{2}\right\}
+\end{equation}
+where \(\Sigma_i\) is the covariance matrix of the response variables \(y\) at the \(i^{th}\) experiment and hence, of the residuals \(e_i\) too.
+If different experiments are assumed independent, the joint probability density function for the all the measured responses is simply the product
+\begin{equation}
+p(\hat{y}_1,\hat{y}_2,\cdots,\hat{y})N|k,\Sigma_1,\Sigma_2,\cdots,\Sigma_N)\sim\left(\prod_{i=1}^N\det(\Sigma_i)\right)^{-1/2}\exp\left(-\frac{1}{2}\sum_{i=1}^N e_i^\top\Sigma_i^{-1}e_i\right)
+\end{equation}
+The Loglikelihood is the log of the joint probability function. With known \(\Sigma_i\), the objective funtion for the ML parameter estimates is
+\begin{equation}
+S_{ML}(k)=\sum_{i=1}^N e_i^\top \Sigma_i^{-1}e_i
+\end{equation}
+Therefore, on statistical grounds
+\begin{equation}
+Q_i=\Sigma_i^{-1}
+\end{equation}
+Since the exact knowledge of all covariance matrices is often impossible to gain, reasonable assumptions about the structure of \(\Sigma_i\) is necessary.
+Case 1: Error terms in each response variable and for experiment are all identically and independently distrubuted (i.i.d)
+\begin{equation}
+\Sigma_i=\sigma_e^2I
+\end{equation}
+Case 2: Different response varaibles have different variances but constant from experiment to experiment.
+\begin{equation}
+\Sigma_i=
+\[
+\begin{bmatrix}
+\sigma_{e1}^2 & 0 & \cdots & 0\\
+0 & \sigma_{e2}^2 & \cdots & 0\\
+\vdots & \vdots & \ddots & \vdots\\
+0 & 0 & \cdots & \sigma_{em}^2
+\end{bmatrix}
+\]
+\end{equation}
+Case 3: Generalized LS estimation will yield ML estimates whenever the errors are distributed with variances that change from experiment to experiment. 
+\begin{equation}
+Q_i=\text{COV}(\epsilon_i)^{-1}
+\end{equation}
+For the case when the error is proportional to each variable,
+\begin{equation}
+\sigma_{e_{ij}}^2=\sigma^2y_{ij}^2;~~i=1,2,\cdots,N,~j=1,2,\cdots,m
+\end{equation}
+the ML parameter estimates are the same as the GLS estimates when the weighting martix is
+\begin{equation}
+Q_i=\text{diag}(y_{i1}^{-2},y_{i2}^{-2},\cdots,y_{im}^{-2});~~i=1,2,\cdots,N
+\end{equation}
+Since that the weights are a function of the unknown parameters, the measurements can be used if the error is not excessive.
+\begin{equation}
+Q_i=\text{diag}(\hat{y}_{i1}^{-2},\hat{y}_{i2}^{-2},\cdots,\hat{y}_{im}^{-2});~~i=1,2,\cdots,N
+\end{equation}
 
 ** Non-linear least square problems
 Given a vector function \(f:\mathbb{R}^n\to\mathbb{R}^m\) with \(n\leq m\), the purpose is to minimize \(\lVert f(x)\rVert\) or to find
