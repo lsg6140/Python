@@ -1703,3 +1703,126 @@ This is descent direction since
 \begin{equation}
 h_{gn}^\top F'(x)=h_{gn}^\top(J^\top f)=-h_{gn}^\top J^\top Jh_{gn}<0
 \end{equation}
+
+*** Gauss-Newton method for ODE
+The model is given by the ODEs
+\begin{equation}
+\frac{dy}{dt}=f(y,k)
+\end{equation}
+The objective funtion is of the form
+\begin{equation}
+S(k)=\sum_{i=1}^N[\hat{y}_i-y(t_i,k)]^\top Q_i[\hat{y}_i-y(t_i,k)]
+\end{equation}
+Linearization of the output vector around \(k^{(j)}\) and retaining first order terms yields
+\begin{equation}
+y(t_i,k^{(j+1)})=y(t_i,k^{(j)})+J(t_i)\Delta k^{(j+1)}
+\end{equation}
+where \(J=\partial y/\partial k\).
+In the case of ODE models, the Jacobian matrix cannot be obtained by a simple differentiation. Sensitivity differential equation for Jacobian matrix should be obtained.
+Differentiate the model ODEs
+\begin{equation}
+\frac{\partial}{\partial k}\left(\frac{dy}{dt}\right)=\frac{\partial}{\partial k}\left(f(y,k)\right)
+\end{equation}
+By reversing the order of differenciation on the left side and performing the implicit differenciation on the right side,
+\begin{equation}
+\frac{d}{dt}\left(\frac{\partial y}{\partial k}\right)=\frac{\partial f}{\partial y}\frac{\partial y}{\partial k}+\frac{\partial f}{\partial k}\frac{\partial k}{\partial k}
+\end{equation}
+so that
+\begin{equation}
+\frac{dJ}{dt}=J\frac{\partial f}{\partial y}+\frac{\partial f}{\partial k}
+\end{equation}
+and let \(J(t_0)=0\).
+This represent a set of \(n\times p\) ODEs.
+Substitition of \(y(t_i,k^{(j+1)})\) into the objective function yields
+\begin{align*}
+S(k^{(j+1)})&=\sum_{i=1}^N[\hat{y}_i-y(t_i,k^{(j+1)})]^\top Q_i[\hat{y}_i-y(t_i,k^{(j+1)})]\\
+            &=\sum_{i=1}^N[\hat{y}_i-y(t_i,k^{(j)})-J(t_i)\Delta k^{(j+1)}]^\top Q_i[\hat{y}_i-y(t_i,k^{(j)})-J(t_i)\Delta k^{(j+1)}]
+\end{align*}
+Use of the stationary condition
+\begin{equation*}
+\frac{\partial S(k^{(j+1)})}{\partial k^{(j+1)}}&=2\sum_{i=1}^N-J(t_i)Q_i[\hat{y}_i-y(t_i,k^{(j)})-J(t_i)\Delta k^{(j+1)}]=0
+\end{equation*}
+Therefore,
+\begin{equation}
+\sum_{i=1}^N J(t_i)Q_iJ(t_i)\Delta k^{(j+1)}=\sum_{i=1}^N J(t_i)Q(i)[\hat{y}_i-y(t_i,k^{(j)})]
+\end{equation}
+Solving the linear equation yields \(\Delta k^{(j+1)}\) and
+\begin{equation}
+k^{(j+1)}=k^{(j)}+\mu\Delta k^{(j+1)}
+\end{equation}
+where \(\mu\) is a stepping parameter \((0<\mu\leq 1)\).
+
+*** Algorithm of GN for ODE models
+1. Input the initial guess for the parameters and NSIG
+2. Repeat until
+3. Solve the ODEs for y and J. At each sampling period, \(t_i,~i=1,\cdots,N\), compute \(y(t_i,k^{(j)})\) and \(J(t_i)\) to set up matrix A=JQJ and vector \(b=JQ[\hat{y}-y]\).
+4. Solve the equation \(A\Delta k^{(j+1)}=b\)
+5. Determine \(\mu\) using the bisection rule and obtain \(k^{(j+1)}=k^{(j)}+\mu\Delta k^{(j+1)}\)
+6. Continue until \(\frac{1}{p}\sum_{i=1}^p\left\lvert\frac{\Delta k_i^{(j+1)}}{k_i^{(j)}}}\right\rvert\leq10^{-NSIG}\)
+
+*** Implementation
+**** ODEs
+The Jacobian matrix is
+\begin{equation}
+J(t)=&\frac{\partial y}{\partial k}=\left[\frac{\partial y}{\partial k_1},\cdots,\frac{\partial y}{\partial k_p}\right]=[J_1,\cdots,J_p]
+\end{equation}
+Each column satisfies the following ODEs
+\begin{equation}
+\frac{dJ_i(t)}{dt}=\frac{\partial f}{\partial y}J_i(t)+\frac{\partial f}{\partial k_i},~~J_i(t_0)=0\text{   for }i=1,\cdots,p
+\end{equation}
+Generate \(n\times(p+1)\) dimensional matrix z
+\begin{equation}
+z=\begin{bmatrix}
+y\\
+J_1\\
+\vdots\\
+J_p
+\end{bmatrix}
+\end{equation}
+Then the ODEs are
+\begin{equation}
+\frac{dz}{dt}=\begin{bmatrix}
+f\\
+\frac{\partial f}{\partial y}J_1+\frac{\partial f}{\partial k_1}\\
+\vdots\\
+\frac{\partial f}{\partial y}J_p+\frac{\partial f}{\partial k_p}
+\end{bmatrix}
+\end{equation}
+**** Bisection rule
+For the stepping parameter \(\mu\), start with \(\mu=1\) and halving \(\mu\) until
+\begin{equation}
+S(k^{(j)}+\mu\Delta k^{(k+1)})<S(k^{(j)})
+\end{equation}
+*** Code for parameter estimation
+    #+begin_src python :session pmb :exports code
+      def gn_ode(
+    #+end_src
+
+* Test of parameter estimation for ODEs
+A homogeneous gas phase reaction
+\begin{equation*}
+2NO+O_2\longleftrightarrow2NO_2
+\end{equation*}
+with the model
+\begin{equation*}
+\frac{d[NO_2]}{dt}=k_1(126.2-[NO_2])(91.9-[NO_2])^2-k_2[NO_2]^2;~~[NO_2]_0=0
+\end{equation*}
+and the measuremets are
+#+name: no2 concentration
+| time | concentration |
+|------+---------------|
+|    0 |             0 |
+|    1 |           1.4 |
+|    2 |           6.3 |
+|    3 |          10.5 |
+|    4 |          14.2 |
+|    5 |          17.6 |
+|    6 |          21.4 |
+|    7 |          23.0 |
+|    9 |          27.0 |
+|   11 |          30.5 |
+|   14 |          34.4 |
+|   19 |          38.8 |
+|   24 |          41.6 |
+|   29 |          43.5 |
+|   39 |          45.3 |
