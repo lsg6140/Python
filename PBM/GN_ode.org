@@ -1,0 +1,370 @@
+#+startup: latexpreview
+* Virtual environment for Python
+  #+begin_src bash :dir ./ :results drawer :exports none
+    pwd
+    virtualenv py3_venv
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  /home/lsg/dev/Python/PBM
+  Using base prefix '/usr'
+  New python executable in /home/lsg/dev/Python/PBM/py3_venv/bin/python3
+  Also creating executable in /home/lsg/dev/Python/PBM/py3_venv/bin/python
+  Installing setuptools, pip, wheel...
+  done.
+  :end:
+  #+begin_src elisp :results drawer :exports none
+    (pyvenv-activate "home/lsg/dev/Python/PBM/py3_venv")
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  nil
+  :end:
+  #+begin_src bash :results drawer :exports none
+    pip install numpy matplotlib
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  Collecting numpy
+    Using cached https://files.pythonhosted.org/packages/1f/c7/198496417c9c2f6226616cff7dedf2115a4f4d0276613bab842ec8ac1e23/numpy-1.16.4-cp27-cp27mu-manylinux1_x86_64.whl
+  Collecting matplotlib
+    Using cached https://files.pythonhosted.org/packages/32/6b/0368cfa5e1d1ae169ab7dc78addda3fd5e6262e48d7373a9114bac7caff7/matplotlib-2.2.4-cp27-cp27mu-manylinux1_x86_64.whl
+  Collecting cycler>=0.10 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/f7/d2/e07d3ebb2bd7af696440ce7e754c59dd546ffe1bbe732c8ab68b9c834e61/cycler-0.10.0-py2.py3-none-any.whl
+  Collecting backports.functools-lru-cache (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/03/8e/2424c0e65c4a066e28f539364deee49b6451f8fcd4f718fefa50cc3dcf48/backports.functools_lru_cache-1.5-py2.py3-none-any.whl
+  Collecting subprocess32 (from matplotlib)
+  Collecting kiwisolver>=1.0.1 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/3d/78/cb9248b2289ec31e301137cedbe4ca503a74ca87f88cdbfd2f8be52323bf/kiwisolver-1.1.0-cp27-cp27mu-manylinux1_x86_64.whl
+  Collecting pytz (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/3d/73/fe30c2daaaa0713420d0382b16fbb761409f532c56bdcc514bf7b6262bb6/pytz-2019.1-py2.py3-none-any.whl
+  Collecting six>=1.10 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/73/fb/00a976f728d0d1fecfe898238ce23f502a721c0ac0ecfedb80e0d88c64e9/six-1.12.0-py2.py3-none-any.whl
+  Collecting python-dateutil>=2.1 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/41/17/c62faccbfbd163c7f57f3844689e3a78bae1f403648a6afb1d0866d87fbb/python_dateutil-2.8.0-py2.py3-none-any.whl
+  Collecting pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1 (from matplotlib)
+    Using cached https://files.pythonhosted.org/packages/dd/d9/3ec19e966301a6e25769976999bd7bbe552016f0d32b577dc9d63d2e0c49/pyparsing-2.4.0-py2.py3-none-any.whl
+  Collecting setuptools (from kiwisolver>=1.0.1->matplotlib)
+    Using cached https://files.pythonhosted.org/packages/ec/51/f45cea425fd5cb0b0380f5b0f048ebc1da5b417e48d304838c02d6288a1e/setuptools-41.0.1-py2.py3-none-any.whl
+  Installing collected packages: numpy, six, cycler, backports.functools-lru-cache, subprocess32, setuptools, kiwisolver, pytz, python-dateutil, pyparsing, matplotlib
+  Successfully installed backports.functools-lru-cache-1.5 cycler-0.10.0 kiwisolver-1.1.0 matplotlib-2.2.4 numpy-1.16.4 pyparsing-2.4.0 python-dateutil-2.8.0 pytz-2019.1 setuptools-41.0.1 six-1.12.0 subprocess32-3.5.4
+  :end:
+* Gauss-Newton algorithm for ODE models
+  #+begin_src python :session gnode :results drawer
+    import numpy as np
+    import matplotlib.pyplot as plt
+  #+end_src
+
+  #+RESULTS:
+  :results:
+  :end:
+
+For the intial value problem
+\begin{equation*}
+\frac{d\mathbf{y}(t)}{dt}=\mathbf{f}(
+\mathbf{y}(t),\mathbf{k});~~\mathbf{y}(t_0)=\mathbf{y}_0
+\end{equation*}
+the objective function with the weighting matrix $\mathbf{Q}_i$ is
+\begin{equation*}
+S(\mathbf{k})=\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]^\top\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]
+\end{equation*}
+** GN algorithm
+1. Input initial guess for the parameters and tolerance
+2. Repeat
+  1) Integrate state and sensitivity equations to obtain $\mathbf{y}(t)$ and $\mathbf{J}(t)$. At each sampling period, $t_i$ $i=1,\cdots,N$ compute $\mathbf{y}(t_i,\mathbf{k}^{(j)})$, and $\mathbf{J}(t_i)$ to set up matrix $\mathbf{A}$ and vector $\mathbf{b}$.
+  2) Solve the linear equation $\mathbf{A}\Delta\mathbf{k}^{(j+1)}=\mathbf{b}$
+  3) Determine $\mu$ using the bisection rule and obtain $\mathbf{k}^{(j+1)}=\mathbf{k}^{(j)}+\mu\Delta\mathbf{k}^{(j+1)}$.
+  4) Continue until the maximum number of iterations is reached or convergence is achieved
+
+** Dimensions
+n: dimension of given problem dim(y)
+p: dimension of parameters dim(k)
+N: dimension of measurements dim(t)
+dim(J) = n*p
+dim(Q) = n*n
+dim(A) = p*p
+dim(b) = p*1
+dim(yhat) = n
+So with N measurements,
+J = n*p*N
+Q = n*n*N; usually neglect effect of N
+yhat = n*N
+*** Rule for variable dimensions in Python source code
+ y, yhat : np.zeros((n,N))
+ x,t : np.zeros(N)
+ J : np.zeros((n,p,N))
+ k : np.zeros(p)
+ Q : np.eye(n) Q is n*n*N. Usually, depence on N is not considered.
+ A : np.zeros((p,p))
+ b : np.zeros((p,1))
+
+** Sensitivity matrix
+The sensitivity or Jacobian matrix is
+\begin{equation*}
+\mathbf{J}(t_i)=\frac{\partial\mathbf{y}}{\partial\mathbf{k}}
+\end{equation*}
+In ODE models, the sensitivity matrix cannot be obtained by a simple differentiation. In ODE model, we can get differential equation for $\mathbf{J}$.
+\begin{equation*}
+\frac{d\mathbf{J}(t)}{dt}=\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{J}(t)+\frac{\partial\mathbf{f}}{\partial\mathbf{k}};~~\mathbf{J}(t_0)=0
+\end{equation*}
+** A matrix and b vector
+\begin{equation*}
+\mathbf{A}=\sum_{i=1}^N\mathbf{J}(t_i)^\top\mathbf{Q}_i\mathbf{J}(t_i)
+\end{equation*}
+\begin{equation*}
+\mathbf{b}=\sum_{t=i}^N\mathbf{J}^\top(t_i)\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k}^{(j)})]
+\end{equation*}
+for solving the linear equation
+\begin{equation*}
+\mathbf{A}\Delta\mathbf{k}^{(j+1)}=\mathbf{b}
+\end{equation*}
+#+begin_src python :session gnode :results none
+  def delta_k(J,Q,yhat,y,k):
+      N = t.size()
+      p = k.size()
+      n = y.size()
+      A = np.zeros((p,p))
+      b = np.zeros((p,1))
+      for i in range(N):
+          JQ = np.matmul(np.transpose(J[i]),Q)
+          A += np.matmul(JQ,J[i])
+          b += np.dot(JQ,yhat[:,i]-y[:,i])
+      del_k = np.linalg.solve(A,b)
+      return del_k
+#+end_src
+
+** Construction of differential equations system
+The sensitivity matrix is
+\begin{equation*}
+\mathbf{J}(t)=\frac{\partial\mathbf{y}}{\partial\mathbf{k}}=\left[\frac{\partial\mathbf{y}}{\partial k_1},\cdots,\frac{\partial\mathbf{y}}{\partial k_p}\right]=[\mathbf{j}_1,\cdots,\mathbf{j}_p]
+\end{equation*}
+where \(\mathbf{j}_i\) represents \(n\)-dimensional vector which is the sensitivity coefficients of the state variables with respect to parameter $k_i$. Each of $\mathbf{j}_i$ satisfies the differential equation for sensitivity matrix such that
+\begin{equation*}
+\frac{d\mathbf{j}_i(t)}{dt}=\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{j}_i+\frac{\partial\mathbf{f}}{\partial k_i};~~\mathbf{j}_p(t_0)=0;~~i=1,\cdots,p
+\end{equation*}
+We generate \(n\times(p+1)\)-dimensional differential equations system
+\begin{equation*}
+\frac{d\mathbf{z}}{dt}=\varphi(\mathbf{z})
+\end{equation*}
+$\mathbf{z}$ is \(n\times(p+1)\)-dimensional vector
+\begin{equation*}
+\mathbf{z}=\begin{bmatrix} \mathbf{x}(t)\\
+                          \frac{\partial\mathbf{y}}{\partial k_1}\\
+                          \vdots\\
+                          \frac{\partial\mathbf{y}}{\partial k_p}
+\end{bmatrix}
+=\begin{bmatrix} \mathbf{y}(t)\\
+                 \mathbf{j}_1(t)\\
+                 \vdots\\
+                 \mathbf{j}_p(t)
+\end{bmatrix}
+\end{equation*}
+$\mathbf{\varphi}(\mathbf{z})$ is \(n\times(p+1)\)-dimensional vector function
+
+\begin{equation*}
+\mathbf{\varphi}(\mathbf{z})=\begin{bmatrix}
+\mathbf{f}(\mathbf{y},\mathbf{k})\\
+\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{j}_1(t)+\frac{\partial\mathbf{f}}{\partial k_1}\\
+\vdots\\
+\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{j}_p(t)+\frac{\partial\mathbf{f}}{\partial k_p}
+\end{bmatrix}
+\end{equation*}
+#+begin_src python :session gnode :results none :exports code
+  def dfdy_cen(func,y,k):
+      h = 1
+      n = np.size(y)
+      dfdy = np.zeros((n,n))
+      for j in range(n):
+          yr = y.reshape((2,1))
+          yl = yr
+          yr[j] += h
+          yl[j] -= h
+          dif = func(yr,k)-func(yl,k)
+          dfdy[:,j] = dif.flatten()/(2*h)
+      return dfdy
+
+  def dfdk_cen(func,y,k):
+      h = 1e-8
+      n = np.size(k)
+      dfdk = np.zeros((n,n))
+      for j in range(n):
+          kr = k
+          kl = k
+          kr[j] += h
+          kl[j] -= h
+          dfdk[:,j] = (func(y,kr)-func(y,kl))/(2*h)
+      return dfdk
+
+#+end_src
+** Bisection rule
+1. Set the stepping parameter $\mu=1$.
+2. Repeat
+   1) Check $S(\mathbf{k}^{(j)}+\mu\Delta\mathbf{k}^{(j+1)})<S(\mathbf{k}^{(j)})$ and accept $\mathbf{k}^{(j+1)}=\mathbf{k}^{(j)}+\mu\Delta\mathbf{k}^{(j+1)}$ is it's satisfied.
+   2) Halve $\mu$ if step 1) is not satisfied.
+
+#+begin_src python :session gnode :results none :exports code
+  def objective_func(yhat,y,Q):
+      S = 0
+      diff = yhat-y
+      N = np.size(yhat,1)
+      for i in range(N):
+          S += np.dot(np.matmul(diff[:,i],Q),diff[:,i])
+      return S
+
+  def delk(J,yhat,y,Q,p):
+      A = np.zeros((p,p))
+      b = np.zeros(p)
+      N = np.size(yhat,1)
+      for i in range(N):
+          JQ = np.matmul(np.transpose(J[:,:,i]),Q)
+          A += np.matmul(JQ,J[:,:,i])
+          b += np.matmul(JQ,yhat[:,i]-y[:,i])
+      dk = np.linalg.solve(A,b)
+      return dk
+
+  def bisect(J,x,yhat,y_func,Q,k):
+      p = np.size(k)
+      dk = delk(J,yhat,y_func(x,k),Q,p)
+      print(dk)
+      mu = 1
+      S_k = objective_func(yhat,y_func(x,k),Q)
+      for j in range(1000):
+          k_temp = k + mu * dk
+          y_temp = y_func(x,k_temp)
+          if objective_func(yhat,y_temp,Q) < S_k:
+              break
+          mu /= mu
+      return k_temp
+
+#+end_src
+
+
+** Tests
+*** GN
+$y=k_1+\frac{x_1}{k_2x_2+k_3x_3}$, $J_{11}=\frac{\partial y_1}{\partial k_1}=1$, $J_{12}=\frac{\partial y_1}{\partial k_2}=-\frac{x_1x_2}{(k_2x_2+k_3x_3)^2}$, $J_{13}=\frac{\partial y_1}{\partial k_3}=-\frac{x_1x_3}{(\k_2x_2+k_3x_3)^2}$.
+with data
+#+begin_src python :session gnode :results output :exports none
+  yhat = np.zeros((1,15))
+  yhat[0,:] = np.array([0.14,0.18,0.22,0.25,0.29,0.32,0.35,0.39,0.37,0.58,0.73,0.96,1.34,2.10,4.39])
+  x1 = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
+  x2 = np.array([15,14,13,12,11,10,9,8,7,6,5,4,3,2,1])
+  x3 = np.array([1,2,3,4,5,6,7,8,7,6,5,4,3,2,1])
+
+  def f(x,k):
+      y = np.zeros((1,15))
+      y[0,:] = k[0]+x[0]/(k[1]*x[1]+k[2]*x[2])
+      return y
+
+  def jac(x,k):
+      n = 1
+      N = np.size(x,1)
+      p = np.size(k)
+      j = np.zeros((n,p,N))
+      j[0,0,:] = 1
+      j[0,1,:] = -x[0]*x[1]/np.power(k[1]*x[1]+k[2]*x[2],2)
+      j[0,2,:] = -x[0]*x[2]/np.power(k[1]*x[1]+k[2]*x[2],2)
+      return j 
+
+  k = np.array([1,1,1])
+  x = (x1,x2,x3)
+  J = jac(x,k)
+  Q = np.eye(1)
+
+  y = f(x,k)
+
+  k_new = bisect(J,x,yhat,f,Q,k)
+#+end_src
+
+#+RESULTS:
+: [-0.91735248  0.18349326  0.66614514]
+*** Jacobian
+The model is
+\begin{equation*}
+\begin{split}
+\frac{dy_1}{dt}=-r_1-r_2\\
+\frac{dy_2}{dt}=\frac{r_1}{2}-r_2\\
+r_1=k_1[y_1^2-y_2(2-2y_1-y_2)/3K_1]\\
+r_2=k_2[y_1y_2-(1-y_1-2y_2)(2-2y_1-y_2)/9K_2]\\
+K_1=0.242,~~K_2=0.428
+\end{split}
+\end{equation*}
+with \(\partial f/\partial y\)
+\begin{equation*}
+\begin{split}
+\frac{\partial f_1}{\partial y_1}=-k_1\left(2y_1+\frac{2y_2}{3K_1}\right)-k_2\left(y_2-\frac{4y_1-4+5y_2}{9K_2}\right)\\
+\frac{\partial f_1}{\partial y_2}=-\frac{2k_1}{3K_1}(y_2+y_1-1)-k_2\left(y_1-\frac{5y_1-5+4y_2}{9K_2}\right)\\
+\frac{\partial f_2}{\partial y_1}=\frac{k_1}{2}\left(2y_1+\frac{2y_2}{3K_1}\right)-k_2\left(y_2-\frac{4y_1-4+5y_2}{9K_2}\right)\\
+\frac{\partial f_2}{\partial y_2}=\frac{k_1}{3K_1}(y_2+y_1-1)-k_2\left(y_1-\frac{5y_1+4y_2-5}{9K_2}\right)
+\end{split}
+\end{equation*}
+and \(\partial f/\partial k\)
+\begin{equation*}
+\begin{split}
+\frac{\partial f_1}{\partial k_1}=-y_1^2-\frac{y_2^2+2y_1y_2-2y_2}{3K_1}\\
+\frac{\partial f_2}{\partial k_1}=\frac{y_1^2}{2}+\frac{y_2^2+2y_1y_2-2y_2}{6K_1}\\
+\frac{\partial f_1}{\partial k_2}=-y_1y_2+\frac{2y_1^2-4y_1+5y_1y_2-5y_2+2y_2^2+2}{9K_2}\\
+\frac{\partial f_2}{\partial k_2}=\frac{\partial f_1}{\partial k_2}
+\end{split}
+\end{equation*}
+#+begin_src python :session gnode :results output :exports none
+  def f(y,k):
+      nN = np.size(y)
+      n = np.size(y,0)
+      N = int(nN/n)
+      f = np.zeros((n,N))
+      K1 = 0.242
+      K2 = 0.428
+      r1 = k[0]*(y[0]**2-y[1]*(2-2*y[0]-y[1])/(3*K1))
+      r2 = k[1]*(y[0]*y[1]-(1-y[0]-2*y[1])*(2-2*y[0]-y[1])/(9*K2))
+      f[0,:] = -r1-r2
+      f[1,:] = r1/2-r2
+      return f
+
+  def dfdy_anal(y,k):
+      K1 = 0.242
+      K2 = 0.428
+      n = np.size(y,0)
+      N = np.size(y,1)
+      dfdy = np.zeros((n,n,N))
+      t1 = 2*y[0]+2*y[1]/(3*K1)
+      t2 = y[0]+y[1]-1
+      t3 = y[1]-(4*y[0]-4+5*y[1])/(9*K2)
+      t4 = y[0]-(5*y[0]-5+4*y[1])/(9*K2)
+      dfdy[0,0,:] = -k[0]*t1-k[1]*t3
+      dfdy[0,1,:] = -2*k[0]/(3*K1)*t2-k[1]*t4
+      dfdy[1,0,:] = k[0]/2*t1-k[1]*t3
+      dfdy[1,1,:] = k[0]/(3*K1)*t2-k[1]*t4
+      return dfdy
+
+  def dfdy_num(func,y,k):
+      n = np.size(y,0)
+      N = np.size(y,1)
+      yin = np.zeros((n,1))
+      dfdy = np.zeros((n,n,N))
+      for i in range(N):
+          yin[:,i] = y[:,i]
+          dfdy[:,:,i] = dfdy_cen(func,yin,k)
+      return dfdy
+
+  y = np.zeros((2,3))
+  y[0,0] = 0.828
+  y[1,0] = 0.0732
+  y[0,1] = 0.704
+  y[1,1] = 0.113
+  y[0,2] = 0.622
+  y[1,2] = 0.1322
+  k = np.zeros(2)
+  k[0] = 0.5
+  k[1] = 1
+
+  A = np.array([1,2,3])
+  A = A.reshape(3,1)
+  print(dfdy_cen(f,y[:,0],k))
+#+end_src
+
+
+#+RESULTS:
+: None
