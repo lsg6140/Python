@@ -53,14 +53,15 @@
   Successfully installed backports.functools-lru-cache-1.5 cycler-0.10.0 kiwisolver-1.1.0 matplotlib-2.2.4 numpy-1.16.4 pyparsing-2.4.0 python-dateutil-2.8.0 pytz-2019.1 setuptools-41.0.1 six-1.12.0 subprocess32-3.5.4
   :end:
 * Gauss-Newton algorithm for ODE models
-  #+begin_src python :session gnode :results drawer
+  #+begin_src python :session gnode :results output :tangle yes
     import numpy as np
     import matplotlib.pyplot as plt
+    from scipy.integrate import solve_ivp, odeint
   #+end_src
 
-  #+RESULTS:
-  :results:
-  :end:
+The purpose is to produce
+1. \(\varphi(z)\) that produces \(n\times(p+1)\)-dimension vector with input arguments of function, initial condition \(y_0\), and parameters \(k\).
+2. Gauss-Newton parameter estimation procedure.
 
 For the intial value problem
 \begin{equation*}
@@ -87,19 +88,22 @@ dim(J) = n*p
 dim(Q) = n*n
 dim(A) = p*p
 dim(b) = p*1
-dim(yhat) = n
+dim(yhat) = n*N
+dim(dfdy) = n*n
+dim(dfdk) = n*p
 So with N measurements,
-J = n*p*N
 Q = n*n*N; usually neglect effect of N
 yhat = n*N
+Jt_i : Jacobians for all \(t_1,t_2,\cdots,t_N\), n*p*N
 *** Rule for variable dimensions in Python source code
- y, yhat : np.zeros((n,N))
- x,t : np.zeros(N)
- J : np.zeros((n,p,N))
- k : np.zeros(p)
- Q : np.eye(n) Q is n*n*N. Usually, depence on N is not considered.
- A : np.zeros((p,p))
- b : np.zeros((p,1))
+ y : np.empty(n) 
+ yhat : np.empty((N,n))
+ t : np.empty(N)
+ J : np.empty((n,p))
+ k : np.empty(p)
+ Q : np.eye(n) * Q is n*n*N. Usually, depence on N is not considered.
+ A : np.empty((p,p))
+ b : np.empty(p)
 
 ** Sensitivity matrix
 The sensitivity or Jacobian matrix is
@@ -121,20 +125,6 @@ for solving the linear equation
 \begin{equation*}
 \mathbf{A}\Delta\mathbf{k}^{(j+1)}=\mathbf{b}
 \end{equation*}
-#+begin_src python :session gnode :results none
-  def delta_k(J,Q,yhat,y,k):
-      N = t.size()
-      p = k.size()
-      n = y.size()
-      A = np.zeros((p,p))
-      b = np.zeros((p,1))
-      for i in range(N):
-          JQ = np.matmul(np.transpose(J[i]),Q)
-          A += np.matmul(JQ,J[i])
-          b += np.dot(JQ,yhat[:,i]-y[:,i])
-      del_k = np.linalg.solve(A,b)
-      return del_k
-#+end_src
 
 ** Construction of differential equations system
 The sensitivity matrix is
@@ -172,199 +162,284 @@ $\mathbf{\varphi}(\mathbf{z})$ is \(n\times(p+1)\)-dimensional vector function
 \frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{j}_p(t)+\frac{\partial\mathbf{f}}{\partial k_p}
 \end{bmatrix}
 \end{equation*}
-#+begin_src python :session gnode :results none :exports code
-  def dfdy_cen(func,y,k):
-      h = 1
-      n = np.size(y)
-      dfdy = np.zeros((n,n))
-      for j in range(n):
-          yr = y.reshape((2,1))
-          yl = yr
-          yr[j] += h
-          yl[j] -= h
-          dif = func(yr,k)-func(yl,k)
-          dfdy[:,j] = dif.flatten()/(2*h)
-      return dfdy
 
-  def dfdk_cen(func,y,k):
+To get the Jacobian for all $t_i$, \(\varphi(\mathbf{z}_i)\) should be constructed for all \(t_i,~~i=1,2,\cdots,N\).
+
+Example of \(\partial f/\partial y\) for \(n=2\) is
+\begin{equation*}
+\frac{\partial f}{\partial y}=\begin{bmatrix}
+\frac{\partial f_1}{\partial y_1} & \frac{\partial f_1}{\partial y_2}\\
+\frac{\partial f_2}{\partial y_1} & \frac{\partial f_2}{\partial y_2}\end{bmatrix}=\begin{bmatrix}
+\frac{f_1(y_1+h,y_2)-f_1(y_1-h,y_2)}{2h} & \frac{f_1(y_1,y_2+h)-f_1(y_1,y_2-h)}{2h}\\
+\frac{f_2(y_1+h,y_2)-f_2(y_1-h,y_2)}{2h} & \frac{f_2(y_1,y_2+h)-f_2(y_1,y_2-h)}{2h}\end{bmatrix}
+\end{equation*}
+
+#+name: dfdy
+#+begin_src python :session gnode :exports code :tangle yes
+  def dfdy_ode(func,y,k,n):
       h = 1e-8
-      n = np.size(k)
-      dfdk = np.zeros((n,n))
-      for j in range(n):
-          kr = k
-          kl = k
-          kr[j] += h
-          kl[j] -= h
-          dfdk[:,j] = (func(y,kr)-func(y,kl))/(2*h)
-      return dfdk
-
+      y = y.astype(np.float)
+      if np.isscalar(y):
+          dfdy = (func(y+h,k)-func(y-h,k))/(2*h)
+          return dfdy
+      else:
+          dfdy = np.empty((n,n))
+          for i in range(n):
+              yr = y.copy()
+              yl = y.copy()
+              yr[i] += h
+              yl[i] -= h
+              dfdy[i] = (func(yr,k)-func(yl,k))/(2*h)
+          return dfdy.transpose()
+      return
 #+end_src
+
+#+name: dfdk
+#+begin_src python :session gnode :exports code :tangle yes
+  def dfdk_ode(func,y,k,n,p):
+      h = 1e-8
+      k = k.astype(np.float)
+      if p == 1:
+          dfdk = (func(y,k+h)-func(y,k-h))/(2*h)
+          return dfdk
+      else:
+          dfdk = np.empty((p,n))
+          for i in range(p):
+              kr = k.copy()
+              kl = k.copy()
+              kr[i] += h
+              kl[i] -= h
+              dfdk[i] = (func(y,kr)-func(y,kl))/(2*h)
+          return dfdk.transpose()
+      return
+#+end_src
+
+#+name: z construction
+#+begin_src python :exports code :tangle yes
+  def phi_z(func,z,k,n,p):
+      y = z[0:n]
+      J = z[n:].reshape((p,n)).transpose()
+      phiz = np.empty(n*(p+1))
+      dfdy = dfdy_ode(func,y,k,n)
+      dfdk = dfdk_ode(func,y,k,n,p)
+      dJdt = np.matmul(dfdy,J)+dfdk
+      phiz[0:n] = func(y,k)
+      phiz[n:] = dJdt.transpose().flatten()
+      return phiz
+#+end_src
+
+The sensitivity matrix \(\textbf{J}\) is obtained by integration of \(\varphi(z)\). Integration of \(\varphi(z)\) returns \(n\times(p+1)\) vector
+\begin{equation*}
+\textbf{z}=\begin{bmatrix}
+\textbf{y}\\
+\textbf{j}_1\\
+\textbf{j}_2\\
+\vdots\\
+\textbf{j}_p
+\end{bmatrix}
+\end{equation*}
+where
+\begin{equation*}
+\textbf{j}_i=\begin{bmatrix}
+\frac{\partial y_1}{\partial k_i}\\
+\frac{\partial y_2}{\partial k_i}\\
+\vdots\\
+\frac{\partial y_n}{\partial k_i}
+\end{bmatrix},~~~~i=1,\hdots,p
+\end{equation*}
+The sensitivity or Jacobian matrix \(\textbf{J}\) is
+\begin{equation*}
+\textbf{J}=\begin{bmatrix}
+\textbf{j}_1,\textbf{j}_2,\cdots,\textbf{j}_p
+\end{bmatrix}
+\end{equation*}
+To compute the \(\textbf{A}\) matrix
+\begin{equation*}
+\mathbf{A}=\sum_{i=1}^N\mathbf{J}(t_i)^\top\mathbf{Q}_i\mathbf{J}(t_i)
+\end{equation*}
+the sensitivity matrix for all measurement time should be returned as \(n\times p\times N\) matrix.
+The ODE solver for initial value problem returns \([n\times(p+1)]\times N\) matrix
+\begin{matrix*}
+Z=\begin{bmatrix}
+y(t_1)&y(t_2)&\cdots&y(t_N)\\
+j_1(t_1)&j_1(t_2)&\cdots&y_1(t_N)\\
+\vdots&&\ddots&\vdots\\
+j_p(t_1)&j_p(t_2)&\cdots&y_p(t_N)
+\end{bmatrix}
+\end{matrix*}
+This matrix would be refomulated for
+\begin{equation*}
+\textbf{Y}=\begin{bmatrix}
+y(t_1)&y(t_2)&\cdots&y(t_N)
+\end{bmatrix}
+\end{equation*}
+and
+\begin{equation*}
+\textbf{J}t_i=\begin{bmatrix}
+\textbf{j}_1(t_1)&\textbf{j}_2(t_1)&\cdots&\textbf{j}_p(t_1)
+\end{bmatrix}
+,\hdots,\begin{bmatrix}
+\textbf{j}_1(t_N)&\textbf{j}_2(t_N)&\cdots&\textbf{j}_p(t_N)
+\end{bmatrix}
+\end{equation*}
+
+#+name: ODE solving
+#+begin_src python :session gnode :exports code :tangle yes
+  def state_jacob_int(func,y0,k,time):
+      if np.isscalar(y0):
+          n = 1
+      else:
+          n = np.size(y0)
+      p = np.size(k)
+      N = np.size(time)
+      # initial condition J0 = 0
+      z0 = np.zeros(n*(p+1))
+      z0[0:n] = y0
+      def dzdt(t,z):
+          return phi_z(func,z,k,n,p)
+      solution = solve_ivp(dzdt,[time[0],time[-1]],z0,method='Radau',t_eval=time)
+      Z = solution.y
+      Y = Z[0:n]
+      J = Z[n:]
+      Jt_i = np.hsplit(J,N)
+      for i in range(N):
+          Jt_i[i] = Jt_i[i].reshape(p,n).transpose()
+      return Y,Jt_i
+
+  def state_only_int(func,y0,k,time):
+      if np.isscalar(y0):
+          def dydt(y,t):
+              return func(y,k)
+          solution = odeint(dydt,y0,time)
+          return solution.transpose()
+      else:
+          def dydt(t,y):
+              return func(y,k)
+          solution = solve_ivp(dydt,[time[0],time[-1]],y0,method='Radau',t_eval=time)
+          return solution.y
+      return
+#+end_src
+
+** Construction of A and b and solve for \(\Delta k\).
+With a particular point \(\mathbf{P}\) as the origin of the coordinate system with coordinates \(\mathbf{x}\), any function \(f\) can be apporximated by its Taylor series
+
+\begin{align*}
+f(\mathbf{x})=&f(\mathbf{P})+\sum_i\frac{\partial f}{\partial x_i}x_i+\frac{1}{2}\sum_{i,j}\frac{\partial^2 f}{\partial x_i\partial x_j}x_ix_j+\cdots\\
+\approx&~~c-\mathbf{b}\cdot\mathbf{x}+\frac{1}{2}\mathbf{x}\cdot\mathbf{A}\cdot\mathbf{x}
+\end{align*}
+where, \(\mathbf{b}=-\nabla f|_{\mathbf{P}}\) and \(A_{ij}=\frac{\partial^2f}{\partial x_i\partial x_j}|_{\mathbf{P}}\) is the Hessian matrix. Diffentiation of this results in
+\begin{equation*}
+\nabla f=\mathbf{A}\cdot\mathbf{x}-\mathbf{b}
+\end{equation*}
+so that the function will be extreme where \(\mathbf{A}\cdot\mathbf{x}=\mathbf{b}\).
+In nonlinear models, we want to minimize the \(\chi^2\) merit function
+\begin{equation*}
+\chi^2=\sum_{i=1}^N\left(\frac{\hat{y}_i-y(t_i\vert k_0,\cdots,k_p)}{\sigma_i}\right)^2
+\end{equation*}
+which will be approximated by Taylor series
+\begin{equation*}
+\chi^2(\mathbf{k})\approx\gamma-\mathbf{b}\cdot\mathbf{k}+\frac{1}{2}\mathbf{k}\cdot\mathbf{A}\cdot\mathbf{k}
+\end{equation*}
+With current estimation of parameter \(\mathbf{k}_\text{cur}\) we have
+\begin{equation*}
+\chi^2(\mathbf{k})=\chi^2(\mathbf{k}_\text{cur})+\nabla\chi^2(\mathbf{k}_\text{cur})\cdot(\mathbf{k}-\mathbf{k}_\text{cur})+\frac{1}{2}(\mathbf{k}-\mathbf{k}_\text{cur})\cdot\textbf{A}\cdot(\mathbf{k}-\mathbf{k}_\text{cur})
+\end{equation*}
+We want \(\nabla\chi^2(\mathbf{k})=0\) at \(\mathbf{k}_\text{min}\) such that
+\begin{equation*}
+\mathbf{k}_\text{min}=\textbf{k}_\text{cur}-\textbf{A}^{-1}\cdot\nabla\chi^2(\textbf{k}_\text{cur})
+\end{equation*}
+The gradient of \(\chi^2\) is (with \(y(t_i)=y(t_i\vert\mathbf{k})\))
+\begin{equation*}
+\frac{\partial\chi^2}{\partial k_j}=-2\sum_{i=1}^N\frac{(\hat{y}_i-y(t_i))}{\sigma_i^2}\frac{\partial y(t_i)}{\partial k_j}
+\end{equation*}
+and the Hessian is
+\begin{equation*}
+\frac{\partial^2\chi^2}{\partial k_j\partial k_l}=2\sum_{i=1}^N\frac{1}{\sigma_i^2}\left[\frac{\partial y(t_i)}{\partial k_j}\frac{\partial y(t_i)}{\partial k_l}-[\hat{y}_i-y(t_i)]\frac{\partial^2y(t_i)}{\partial k_j\partial k_l}\right]
+\end{equation*}
+Ignoring the second derivative of \(y\) and factoring out the common factor 2,
+In \(n\)-dimensional \(y\),
+\begin{equation*}
+\nabla\chi^2=-2\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i)]^\top\mathbf{Q}_i\mathbf{J}_i
+\end{equation*}
+and
+\begin{equation*}
+\mathbf{H}(\chi^2)=2\sum_{i=1}^N\mathbf{J}_i^\top\mathbf{Q}_i\mathbf{J}_i
+\end{equation*}
+where \(\mathbf{J}_i=\frac{\partial\mathbf{y}(t_i)}{\partial\mathbf{k}}\).
+
+
+\begin{equation*}
+\mathbf{A}=\sum_{i=1}^N\mathbf{J}(t_i)^\top\mathbf{Q}_i\mathbf{J}(t_i)
+\end{equation*}
+\begin{equation*}
+\mathbf{b}=\sum_{t=i}^N\mathbf{J}^\top(t_i)\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k}^{(j)})]
+\end{equation*}
+\begin{equation*}
+\mathbf{A}\Delta\mathbf{k}^{(j+1)}=\mathbf{b}
+\end{equation*}
+
+#+name: Delta k
+#+begin_src python :session gnode :exports code :tangle yes
+  def delta_k(J,Q,yhat,Y,p,N):
+      Hessian = np.zeros((p,p))
+      gradient = np.zeros(p)
+      # Check whether y is scalar
+      if np.size(Q) == 1:
+          print('solve for scalar y')
+          for i in range(N):
+              Hessian += np.matmul(J[i].transpose(),J[i])
+              gradient += np.dot(J[i].transpose(),yhat[i]-Y[:,i])
+      else:
+          print('solve for vector y')
+          for i in range(N):
+              JQ = np.matmul(J[i].transpose(),Q)
+              Hessian += np.matmul(JQ,J[i])
+              gradient += np.dot(JQ,yhat[:,i]-Y[:,i])
+      del_k = np.linalg.solve(Hessian,gradient)
+      return del_k
+#+end_src
+
 ** Bisection rule
 1. Set the stepping parameter $\mu=1$.
 2. Repeat
    1) Check $S(\mathbf{k}^{(j)}+\mu\Delta\mathbf{k}^{(j+1)})<S(\mathbf{k}^{(j)})$ and accept $\mathbf{k}^{(j+1)}=\mathbf{k}^{(j)}+\mu\Delta\mathbf{k}^{(j+1)}$ is it's satisfied.
    2) Halve $\mu$ if step 1) is not satisfied.
+The objective function is
+\begin{equation*}
+S(\mathbf{k})=\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]^\top\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]
+\end{equation*}
 
-#+begin_src python :session gnode :results none :exports code
-  def objective_func(yhat,y,Q):
+
+#+begin_src python :session gnode :results none :exports code :tangle yes
+  def chi_squared(yhat,Y,Q,N):
       S = 0
-      diff = yhat-y
-      N = np.size(yhat,1)
-      for i in range(N):
-          S += np.dot(np.matmul(diff[:,i],Q),diff[:,i])
+      diff = yhat-Y
+      if np.size(Q) == 1:
+          S = np.sum(diff**2)
+      else:
+          for i in range(N):
+              S += np.dot(np.matmul(diff[:,i],Q),diff[:,i])
       return S
 
-  def delk(J,yhat,y,Q,p):
-      A = np.zeros((p,p))
-      b = np.zeros(p)
-      N = np.size(yhat,1)
-      for i in range(N):
-          JQ = np.matmul(np.transpose(J[:,:,i]),Q)
-          A += np.matmul(JQ,J[:,:,i])
-          b += np.matmul(JQ,yhat[:,i]-y[:,i])
-      dk = np.linalg.solve(A,b)
-      return dk
-
-  def bisect(J,x,yhat,y_func,Q,k):
+  def bisect(func,yhat,Q,k,time,iter_max):
+      # check whether y is 1-dimensional
+      if np.size(yhat) == np.size(yhat,0):
+          y0 = yhat[0]
+          N = np.size(yhat)
+      else:
+          y0 = yhat[:,0]
+          N = np.size(yhat,1)
       p = np.size(k)
-      dk = delk(J,yhat,y_func(x,k),Q,p)
-      print(dk)
-      mu = 1
-      S_k = objective_func(yhat,y_func(x,k),Q)
-      for j in range(1000):
+      Y,J = state_jacob_int(func,y0,k,time)
+      dk = delta_k(J,Q,yhat,Y,p,N)
+      mu = 1.0
+      S0 = chi_squared(yhat,Y,Q,N)
+      for j in range(iter_max):
           k_temp = k + mu * dk
-          y_temp = y_func(x,k_temp)
-          if objective_func(yhat,y_temp,Q) < S_k:
+          Y_temp = state_only_int(func,y0,k_temp,time)
+          S = chi_squared(yhat,Y_temp,Q,N)
+          if S < S0:
               break
-          mu /= mu
-      return k_temp
-
+          mu /= 2
+      return k_temp,Y,J
 #+end_src
-
-
-** Tests
-*** GN
-$y=k_1+\frac{x_1}{k_2x_2+k_3x_3}$, $J_{11}=\frac{\partial y_1}{\partial k_1}=1$, $J_{12}=\frac{\partial y_1}{\partial k_2}=-\frac{x_1x_2}{(k_2x_2+k_3x_3)^2}$, $J_{13}=\frac{\partial y_1}{\partial k_3}=-\frac{x_1x_3}{(\k_2x_2+k_3x_3)^2}$.
-with data
-#+begin_src python :session gnode :results output :exports none
-  yhat = np.zeros((1,15))
-  yhat[0,:] = np.array([0.14,0.18,0.22,0.25,0.29,0.32,0.35,0.39,0.37,0.58,0.73,0.96,1.34,2.10,4.39])
-  x1 = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
-  x2 = np.array([15,14,13,12,11,10,9,8,7,6,5,4,3,2,1])
-  x3 = np.array([1,2,3,4,5,6,7,8,7,6,5,4,3,2,1])
-
-  def f(x,k):
-      y = np.zeros((1,15))
-      y[0,:] = k[0]+x[0]/(k[1]*x[1]+k[2]*x[2])
-      return y
-
-  def jac(x,k):
-      n = 1
-      N = np.size(x,1)
-      p = np.size(k)
-      j = np.zeros((n,p,N))
-      j[0,0,:] = 1
-      j[0,1,:] = -x[0]*x[1]/np.power(k[1]*x[1]+k[2]*x[2],2)
-      j[0,2,:] = -x[0]*x[2]/np.power(k[1]*x[1]+k[2]*x[2],2)
-      return j 
-
-  k = np.array([1,1,1])
-  x = (x1,x2,x3)
-  J = jac(x,k)
-  Q = np.eye(1)
-
-  y = f(x,k)
-
-  k_new = bisect(J,x,yhat,f,Q,k)
-#+end_src
-
-#+RESULTS:
-: [-0.91735248  0.18349326  0.66614514]
-*** Jacobian
-The model is
-\begin{equation*}
-\begin{split}
-\frac{dy_1}{dt}=-r_1-r_2\\
-\frac{dy_2}{dt}=\frac{r_1}{2}-r_2\\
-r_1=k_1[y_1^2-y_2(2-2y_1-y_2)/3K_1]\\
-r_2=k_2[y_1y_2-(1-y_1-2y_2)(2-2y_1-y_2)/9K_2]\\
-K_1=0.242,~~K_2=0.428
-\end{split}
-\end{equation*}
-with \(\partial f/\partial y\)
-\begin{equation*}
-\begin{split}
-\frac{\partial f_1}{\partial y_1}=-k_1\left(2y_1+\frac{2y_2}{3K_1}\right)-k_2\left(y_2-\frac{4y_1-4+5y_2}{9K_2}\right)\\
-\frac{\partial f_1}{\partial y_2}=-\frac{2k_1}{3K_1}(y_2+y_1-1)-k_2\left(y_1-\frac{5y_1-5+4y_2}{9K_2}\right)\\
-\frac{\partial f_2}{\partial y_1}=\frac{k_1}{2}\left(2y_1+\frac{2y_2}{3K_1}\right)-k_2\left(y_2-\frac{4y_1-4+5y_2}{9K_2}\right)\\
-\frac{\partial f_2}{\partial y_2}=\frac{k_1}{3K_1}(y_2+y_1-1)-k_2\left(y_1-\frac{5y_1+4y_2-5}{9K_2}\right)
-\end{split}
-\end{equation*}
-and \(\partial f/\partial k\)
-\begin{equation*}
-\begin{split}
-\frac{\partial f_1}{\partial k_1}=-y_1^2-\frac{y_2^2+2y_1y_2-2y_2}{3K_1}\\
-\frac{\partial f_2}{\partial k_1}=\frac{y_1^2}{2}+\frac{y_2^2+2y_1y_2-2y_2}{6K_1}\\
-\frac{\partial f_1}{\partial k_2}=-y_1y_2+\frac{2y_1^2-4y_1+5y_1y_2-5y_2+2y_2^2+2}{9K_2}\\
-\frac{\partial f_2}{\partial k_2}=\frac{\partial f_1}{\partial k_2}
-\end{split}
-\end{equation*}
-#+begin_src python :session gnode :results output :exports none
-  def f(y,k):
-      nN = np.size(y)
-      n = np.size(y,0)
-      N = int(nN/n)
-      f = np.zeros((n,N))
-      K1 = 0.242
-      K2 = 0.428
-      r1 = k[0]*(y[0]**2-y[1]*(2-2*y[0]-y[1])/(3*K1))
-      r2 = k[1]*(y[0]*y[1]-(1-y[0]-2*y[1])*(2-2*y[0]-y[1])/(9*K2))
-      f[0,:] = -r1-r2
-      f[1,:] = r1/2-r2
-      return f
-
-  def dfdy_anal(y,k):
-      K1 = 0.242
-      K2 = 0.428
-      n = np.size(y,0)
-      N = np.size(y,1)
-      dfdy = np.zeros((n,n,N))
-      t1 = 2*y[0]+2*y[1]/(3*K1)
-      t2 = y[0]+y[1]-1
-      t3 = y[1]-(4*y[0]-4+5*y[1])/(9*K2)
-      t4 = y[0]-(5*y[0]-5+4*y[1])/(9*K2)
-      dfdy[0,0,:] = -k[0]*t1-k[1]*t3
-      dfdy[0,1,:] = -2*k[0]/(3*K1)*t2-k[1]*t4
-      dfdy[1,0,:] = k[0]/2*t1-k[1]*t3
-      dfdy[1,1,:] = k[0]/(3*K1)*t2-k[1]*t4
-      return dfdy
-
-  def dfdy_num(func,y,k):
-      n = np.size(y,0)
-      N = np.size(y,1)
-      yin = np.zeros((n,1))
-      dfdy = np.zeros((n,n,N))
-      for i in range(N):
-          yin[:,i] = y[:,i]
-          dfdy[:,:,i] = dfdy_cen(func,yin,k)
-      return dfdy
-
-  y = np.zeros((2,3))
-  y[0,0] = 0.828
-  y[1,0] = 0.0732
-  y[0,1] = 0.704
-  y[1,1] = 0.113
-  y[0,2] = 0.622
-  y[1,2] = 0.1322
-  k = np.zeros(2)
-  k[0] = 0.5
-  k[1] = 1
-
-  A = np.array([1,2,3])
-  A = A.reshape(3,1)
-  print(dfdy_cen(f,y[:,0],k))
-#+end_src
-
-
-#+RESULTS:
-: None

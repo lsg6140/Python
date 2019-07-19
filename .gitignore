@@ -11,3 +11,6 @@ images/*
 .#*
 .Python
 .DS_Store
+.ipynb*
+Untitled*
+__pycache__

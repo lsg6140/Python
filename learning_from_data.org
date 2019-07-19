@@ -1,0 +1,374 @@
+#+startup: latexpreview
+* Python virtual environment
+#+begin_src bash :dir ./ :results drawer :exports none
+  pwd
+  virtualenv py3_venv
+#+end_src
+
+#+RESULTS:
+:results:
+/home/lsg/dev/Python
+Using base prefix '/usr'
+New python executable in /home/lsg/dev/Python/py3_venv/bin/python3
+Also creating executable in /home/lsg/dev/Python/py3_venv/bin/python
+Installing setuptools, pip, wheel...
+done.
+:end:
+
+#+begin_src elisp :results drawer :exports none
+  (pyvenv-activate "home/lsg/dev/Python/py3_venv")
+#+end_src
+
+#+RESULTS:
+:results:
+nil
+:end:
+
+#+begin_src bash :results drawer :exports none
+  pip install numpy matplotlib
+#+end_src
+
+#+RESULTS:
+:results:
+Collecting numpy
+  Using cached https://files.pythonhosted.org/packages/1f/c7/198496417c9c2f6226616cff7dedf2115a4f4d0276613bab842ec8ac1e23/numpy-1.16.4-cp27-cp27mu-manylinux1_x86_64.whl
+Collecting matplotlib
+  Using cached https://files.pythonhosted.org/packages/32/6b/0368cfa5e1d1ae169ab7dc78addda3fd5e6262e48d7373a9114bac7caff7/matplotlib-2.2.4-cp27-cp27mu-manylinux1_x86_64.whl
+Collecting cycler>=0.10 (from matplotlib)
+  Using cached https://files.pythonhosted.org/packages/f7/d2/e07d3ebb2bd7af696440ce7e754c59dd546ffe1bbe732c8ab68b9c834e61/cycler-0.10.0-py2.py3-none-any.whl
+Collecting backports.functools-lru-cache (from matplotlib)
+  Using cached https://files.pythonhosted.org/packages/03/8e/2424c0e65c4a066e28f539364deee49b6451f8fcd4f718fefa50cc3dcf48/backports.functools_lru_cache-1.5-py2.py3-none-any.whl
+Collecting subprocess32 (from matplotlib)
+  Downloading https://files.pythonhosted.org/packages/32/c8/564be4d12629b912ea431f1a50eb8b3b9d00f1a0b1ceff17f266be190007/subprocess32-3.5.4.tar.gz (97kB)
+Collecting kiwisolver>=1.0.1 (from matplotlib)
+  Downloading https://files.pythonhosted.org/packages/3d/78/cb9248b2289ec31e301137cedbe4ca503a74ca87f88cdbfd2f8be52323bf/kiwisolver-1.1.0-cp27-cp27mu-manylinux1_x86_64.whl (93kB)
+Collecting pytz (from matplotlib)
+  Downloading https://files.pythonhosted.org/packages/3d/73/fe30c2daaaa0713420d0382b16fbb761409f532c56bdcc514bf7b6262bb6/pytz-2019.1-py2.py3-none-any.whl (510kB)
+Collecting six>=1.10 (from matplotlib)
+  Using cached https://files.pythonhosted.org/packages/73/fb/00a976f728d0d1fecfe898238ce23f502a721c0ac0ecfedb80e0d88c64e9/six-1.12.0-py2.py3-none-any.whl
+Collecting python-dateutil>=2.1 (from matplotlib)
+  Using cached https://files.pythonhosted.org/packages/41/17/c62faccbfbd163c7f57f3844689e3a78bae1f403648a6afb1d0866d87fbb/python_dateutil-2.8.0-py2.py3-none-any.whl
+Collecting pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1 (from matplotlib)
+  Downloading https://files.pythonhosted.org/packages/dd/d9/3ec19e966301a6e25769976999bd7bbe552016f0d32b577dc9d63d2e0c49/pyparsing-2.4.0-py2.py3-none-any.whl (62kB)
+Collecting setuptools (from kiwisolver>=1.0.1->matplotlib)
+  Downloading https://files.pythonhosted.org/packages/ec/51/f45cea425fd5cb0b0380f5b0f048ebc1da5b417e48d304838c02d6288a1e/setuptools-41.0.1-py2.py3-none-any.whl (575kB)
+Building wheels for collected packages: subprocess32
+  Running setup.py bdist_wheel for subprocess32: started
+  Running setup.py bdist_wheel for subprocess32: finished with status 'done'
+  Stored in directory: /home/lsg/.cache/pip/wheels/68/39/1a/5e402bdfdf004af1786c8b853fd92f8c4a04f22aad179654d1
+Successfully built subprocess32
+Installing collected packages: numpy, six, cycler, backports.functools-lru-cache, subprocess32, setuptools, kiwisolver, pytz, python-dateutil, pyparsing, matplotlib
+Successfully installed backports.functools-lru-cache-1.5 cycler-0.10.0 kiwisolver-1.1.0 matplotlib-2.2.4 numpy-1.16.4 pyparsing-2.4.0 python-dateutil-2.8.0 pytz-2019.1 setuptools-41.0.1 six-1.12.0 subprocess32-3.5.4
+:end:
+
+* Ch 1
+#+begin_src python :session lfd :exports none
+  import numpy as np
+  import matplotlib.pyplot as plt
+#+end_src
+
+#+RESULTS:
+
+** Ex 1.4
+Take $\mathbb{R}^2$ and choose a random line in the plane as the target function.
+#+begin_src python :session lfd :results output
+  def rand_target_line_2d():
+      fit = 1
+      while fit:
+          a = np.random.randn()
+          b = np.random.randn()
+          if a>0 and b>0.7:
+              fit = 1
+          elif a<0 and b<0.3:
+              fit = 1
+          elif a<0 and a+b>0.7:
+              fit = 1
+          elif a>0 and a+b<0.3:
+              fit = 1
+          else:
+              fit = 0
+      return a,b
+#+end_src
+
+#+RESULTS:
+
+#+begin_src python :session lfd :results output
+  def split_region_2d(a,b,x1,x2):
+      if a>0:
+          y = np.sign(a*x1+b-x2)
+      else:
+          y = np.sign(x2-(a*x1+b))
+      return y
+#+end_src
+
+#+RESULTS:
+
+Choose the inputs $\mathbf{x}_n$ of the data set as random points in the plane, and evaluate the target function on each $\mathbf{x}_n$ to get the corresponding output $y_n$.
+#+begin_src python :session lfd :results output
+  def eval_target_func_2d(n):
+      x = np.zeros((n,2))
+      for i in range(n):
+          x[i,0]=np.random.rand()
+          x[i,1]=np.random.rand()
+      y = np.zeros(n)
+      (a,b) = rand_target_line_2d()
+      for i in range(n):
+          y[i]=split_region_2d(a,b,x[i,0],x[i,1])
+      return x,y,a,b
+  n = 20
+  x,y,a1,a2=eval_target_func_2d(n)
+#+end_src
+
+#+RESULTS:
+
+Try the perceptron learning algorithm on your data set and see how long it takes to converge and how well the final hypothesis $g$ matches your target $f$.
+For $d$-dimensional Euclidean space with inputs $\mathbf{x}\in\mathbb{R}^d$, the input space is
+\begin{equation*}
+\mathcal{X}=\{1\}\times\mathbb{R}^d=\{(1,x_1,\cdots,x_d)^\top\}
+\end{equation*}
+The weights vector includes the bias $b$ such that the weight vector becomes
+\begin{equation*}
+\mathbf{w}=(b,w_1,\cdots,w_2)^\top
+\end{equation*}
+The hypothesis function $h$ is
+\begin{equation*}
+h(\mathbf{x})=\text{sign}(\mathbf{w}^\top\mathbf{x})
+\end{equation*}
+The perceptron learning algorithm (PLA) is
+- iterate
+-- calculate $h(t)$ using $h(t)=\text{sign}(\mathbf{w}(t)^\top\mathbf{x}(t))$
+-- compare $y(t)$ and $h(t)$
+-- pick an example that is currently misclassified by the current weight vector $\mathbf{w}(t)$
+-- Update $\mathbf{w}$ by $\mathbf{w}(t+1)=\mathbf{w}(t)+y(t)\mathbf{x}(t)$.
+#+begin_src python :session lfd :results output
+  def pla(n,x,y,w0,b):
+      x = np.insert(x,0,1,axis=1)
+      w = np.insert(w0,0,b)
+      converge = False
+      for iteration in range(100000):
+          h = np.sign(np.inner(w,x))
+          if np.array_equal(y,h):
+              break
+          for i in range(n):
+              if y[i] != h[i]:
+                  w += y[i]*x[i]
+                  break
+      print('The interation number is {}'.format(iteration+1))
+      print('The weight vector is {}'.format(w))
+      return h
+  w0 = np.array([0.1,0])
+  h = pla(n,x,y,w0,0)
+  def plot_perceptron_2d(x,h,a1,a2):
+      x1 = np.linspace(0,1,50)
+      x2 = a1*x1+a2
+      fig = plt.figure()
+      plt.plot(x1,x2)
+      plt.axis((0,1,0,1))
+      for i in range(n):
+          if h[i]>0:
+              plt.scatter(x[i,0],x[i,1],c="blue")
+          else:
+              plt.scatter(x[i,0],x[i,1],c="red")
+      plt.show()
+      return
+  plot_perceptron_2d(x,h,a1,a2)
+#+end_src
+
+#+RESULTS:
+: The interation number is 16
+: The weight vector is [-1.          0.21959959  3.47891366]
+
+** Ex 1.7
+For each of the following learning scenarios in the above problem, evaluate the performance of $g$ on the three points in $\mathcal{X}$ outside $\mathcal{D}$. To measure the performance, compute how many of the 8 possible target functions agree with $g$ on all three points, on two of them, on one of them, and none of them
+(a) $\mathcal{H}$ has only two hypotheses, on that always returns 1 and one that always returns 0. The learning picks the hypothesis that matches the data set the most.
+Let $h_1$ returns always 1 and $h_2$ returns always 0. The algorithm picks $h_1$ from the data set. Then it has
+Agree all: 1
+Agree two: 3
+Agree one: 3
+Agree none: 1
+(b) The same $\mathcal{H}$, but the learning algorithm now picks the hypothesis that matches the data set the least.
+The algorithm picks $h_2$ from the data set. Then is has
+Agree all: 1
+Agree two: 3
+Agree two: 3
+Agree none : 1
+(c) $\mathcal{H}=\{\text{XOR}\}$ (only one hypothesis which is always picked), where XOR is defined by $\text{XOR(\mathbf{x})}=1$ if the number of 1's in $\mathbf{x}$ is odd and $\text{XOR}(\mathbf{x})=0$ if the number is even.
+XOR agrees perfectly with training examples in data set. But the performance is the same with previous.
+Agree all: f2
+Agree two: f1,f4,f6
+Agree one: f3,f5,f8
+Agree none: f7
+(d) $\mathcal{H}$ contains all possible hypotheses (all Boolean functions on three variables), and the learning algorithm picks the hypothesis that agrees with all training examples, but otherwise disagree the most with the XOR.
+$\mathcal{H}$ has $2^5=32$ possible Boolean functions. We pick the hypothesis which disagree the most with XOR in out of data set(??). The performance is the same.
+
+** Ex 1.8 
+If $\mu=0.9$, what is the probability that a sample of 10 marbles will have $\nu\leq0.1$?
+$\text{Pr}(\nu\leq0.1)=\text{Pr}(\nu=0)+\text{Pr}(\nu=0.1)=\binom{10}{0}0.9^00.1^{10}+\binom{10}{1}0.9^0.1^9=9.1\times10^{-9}$
+
+** Ex 1.9
+\begin{align*}
+\text{Pr}(\mu-\nu\geq0.8)=&\text{Pr}(\vert\mu-\nu\vert\geq0.8)-\text{Pr}(\nu-\mu\geq0.8)\\
+                         =&\text{Pr}(\vert\mu-\nu\vert\geq0.8)\\
+                         \geq&2e^{-2\epsilon^2N}\\
+                         =&5.52\time10^{-6}
+\end{align*}
+
+** Ex 1.10
+Here is an experiment that illustrates the difference between a single bin and multiple bins. Run a computer simulation for flopping 1,000 fair coins. Filp each coin independently 10 times. Let's focus on 3 coins as follows: $c_1$ is the first coin flipped; $c_{\text{rand}}$ is a coin you choose at random; $c_{\min}$ is the coin that had the minimum frequency of heads (pick the earlier one in case of a tie). Let $\nu_1,\nu_{\text{rand}},\nu_{\min}$ be the fraction of heads you obtain for the respective three coins.
+(a) What is $\mu$ for the three coins selected?
+$\mu$ is 0.5 for each coin.
+(b) Repeat this entire experiment a large number of times to get several instances (100,000) of $\nu_1,\nu_\text{rand},\nu_\min$, and plot the histograms of the distribution of $\nu_1,\nu_\text{rand},\nu_\min$. Notice that which coins end up being $c_\text{rand}$ and $c_\min$ may differ from one run to another.
+#+begin_src python :session ex110 :results output
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  def coin_flips(n):
+      coin = np.array(('heads','tails'))
+      n_head = 0
+      for i in range(n):
+          flip = np.random.choice(coin,1)
+          if flip == coin[0]:
+              n_head += 1
+      return (n_head/n)
+
+  def N_coin_flips(n,N):
+      # flopping N coins n times
+      nu = np.zeros(N)
+      for i in range(N):
+          nu[i] = coin_flips(n)
+      return nu
+
+  def three_nu(n,N,K):
+      # repeat the experiment K times
+      # return v1,v_rand,v_min for each experiment
+      nu3 = np.zeros((3,K))
+      for i in range(K):
+          nu = N_coin_flips(n,N)
+          nu3[0,i] = nu[0]
+          j = np.random.random_integers(0,N-1)
+          nu3[1,i] = nu[j]
+          ii = 0
+          for k in range(N):
+              if nu[k]<nu[ii]:
+                  ii = k
+          nu3[2,i] = nu[ii]
+      return nu3
+
+  nu = three_nu(10,1000,1000)
+#+end_src
+
+#+RESULTS:
+#+begin_src python :session ex110 :results link :file images/histogram.png
+  plt.subplot(3,1,1)
+  plt.xlim(0,1)
+  plt.hist(nu[0])
+  plt.subplot(3,1,2)
+  plt.xlim(0,1)
+  plt.hist(nu[1])
+  plt.subplot(3,1,3)
+  plt.xlim(0,1)
+  plt.hist(nu[2])
+  plt.savefig('images/histogram.png')
+#+end_src
+
+#+RESULTS:
+[[file:images/histogram.png]]
+
+#+begin_src python :session ex110 :results link :file images/prob.png
+  def probability_eps(nu,mu,epsilon):
+      count = 0
+      for i in range(nu.size):
+          if np.absolute(nu[i]-mu)>epsilon:
+              count += 1
+      return count/nu.size
+
+  def plot_data_eps(nu,mu,n):
+      # generate plot data for n points
+      print(nu)
+      epsilon = np.logspace(-0.2,-1,num=n)
+      prob = np.zeros((3,n))
+      for j in range(3):
+          for i in range(n):
+              prob[j,i] = probability_eps(nu[j],mu,epsilon[i])
+      return epsilon,prob
+
+  eps,prob = plot_data_eps(nu,0.5,100)
+  hoef = 2*np.exp(-2*np.power(eps,2)*10)
+  fig2 = plt.figure()
+  plt.subplot(2,1,1)
+  plt.plot(eps,hoef)
+  for i in range(3):
+      plt.plot(eps,prob[i])
+  plt.subplot(2,1,2)
+  plt.plot(eps,1000*hoef)
+  plt.plot(eps,prob[2])
+  plt.yscale("log")
+  plt.savefig("images/prob.png")
+#+end_src
+
+#+RESULTS:
+[[file:images/prob.png]]
+
+(e) Relate part (d) to the multiple bins in Figure 1.10
+$c_1$ follows the Hoeffding inequality since it is a result from a single hypothesis.
+The hypothesis $c_1$ is chosen before we know the fraction $\nu$.
+
+$c_\text{rand}$ is random choice so that it is same with choosing a hypothesis without knowing the $\nu$.
+
+$c_\min$ does not follow the Hoeffding inequality. Minimum $\nu$ means that this hypothesis generated the minimum in sample error. Since it showed minimum $E_{\text{in}}(h)$, this hypothesis will be chosen as the final hypothesis $g$. But clearly, $E_{\text{in}}(h)$ is far from the real error (out-of-sample error) generated by this hypothesis $E_{\text{out}}(h)=\mu=0.5$. 
+The hypothesis $c_\min$ is chosen after we know  the fraction $\nu$.
+This hypothesis is not a random choice.
+
+** Ex 1.11
+We are given a data set $\mathcal{D}$ of 25 training examples from an unkown target function $f:\mathbb{R}\to\{-1,1\}$. To learn $f$, we use a simple hypothesis set $\mathcal{H}=\{h_1,h_2\}$ where $h_1$ is the constant 1 function and $h_2$ is the constant -1.
+We consider two learning algorithms, S and C. S chooses the hypothesis that agrees the most with $\mathcal{D}$ and C chooses the other hypothesis deliberately. Let us see how these algorithms perform out of sample from the deterministric and probabilistric points of view. Assume in the probabilistic view that there is a probability distribution on $X$, and let $\text{Pr}(f(\mathbf{x})=1)=p$.
+(a) Can S produce a hypothesis that is guaranteed to perform better than random on any point outside $\mathcal{D}$?
+
+(b)
+
+(c) If p=0.9, what is the probability that S will produce a better hypothesis than C?
+Better hypothesis is $h_1$ in this case. The possibility that S will choose $h_1$ is the possibility that $\mathcal{D}$ has more 1 than -1.
+\begin{equation*}
+\text{Pr}(\text{number of }1\geq 13)=\sum_{n=13}^{25}\text{Pr}(\text{number of }1=n)=\sum_{n=13}^{25}\binom{25}{n}(0.9)^n(0.1)^{25-n}=0.999
+\end{equation*}
+
+** Ex 1.13
+Consider the bin model for a hypothesis $h$ that makes an error with probability $\mu$ in approximating a deterministic target function (both $h$ and $f$ are binary functions). If we use the same $h$ to approximate a noisy version of $f$ given by
+\begin{equation*}
+P(y|\mathbf{x})=\begin{cases}\lambda&y=f(\mathbf{x})\\
+                             1-\lambda&y\neq f(\mathbf{x})
+\end{cases}
+\end{equation*}
+(a) What is the probability of error that $h$ makes in approximating $y$.
+\begin{align*}
+\text{Pr}(h(\mathbf{x})\neq y)=&\text{Pr}[h(\mathbf{x})=f(\mathbf{x})]\text{Pr}[f(\mathbf{x})\neq y]+\text{Pr}[h(\mathbf{x})\neq f(\mathbf{x})]\text{Pr}[f(\mathbf{x})=y]\\
+=&(1-\mu)(1-\lambda)+\mu\lambda=(2\lambda-1)\mu-\lambda+1
+\end{align*}
+(b) At what value of $\lambda$ will the performance of $h$ be independent of $\mu$.
+$\lambda=\frac{1}{2}$
+
+* Ch2
+** Ex 2.2
+(a) Verify the bound of Theorem 2.4 in the three cases of Example 2.2:
+ (i) Positive rays have a break point of 2. Therefore, 
+ \begin{equation*}
+m_H(N)\leq\sum_{i=0}^{1}\binom{N}{i}=N+1
+\end{equation*}
+ (ii) Positive intervals have a break point of 3. Therefore,
+\begin{equation*}
+m_H(N)\leq\sum_{i=0}^{2}\binom{N}{i}=\frac{1}{2}N(N-1)+N+1=\frac{N^2}{2}+\frac{N}{2}+1
+\end{equation*}
+ (iii) Convex sets do not have a break point. Therefore, $m_H(N)=2^N$
+(b) Does there exist a hypothesis set for which $m_H(N)=N+2^{\lfloor N/2\rfloor}$.
+No, since growth function is $2^N$ or bounded by a polynomial.
+** Ex 2.4
+Consider the input space $X={1}\times\mathbb{R}^d$ (including the constant coordinate \(x_0=1\)). Show that the VC dimension of the perceptron (with \(d+1\) parameters, counting \(w_0\)) is exactly \(d+1\) by showing that it is at least \(d+1\) and at most \(d+1\), as follows
+ (a) To show that \(d_{VC}\geq d+1\), find \(d+1\) points in \(X\) that the perceptron can shatter. 
+Let \((d+1)\times(d+1)\) matrix \(A\) represents \(d+1\) points (as row) of \(d+1\) dimension and let \(w\) represents parameter vector of \(d+1\) dimension. Then $Aw$ will represents the perceptron which will produce the perceptron vector \(p\) with 1 and -1 as elements. Therefore the perceptron would be like $Aw=p$. So if \(A\) is non-singular, we can have \(w\) for any \(p\). We can find a non-singular matrix $A$ since \(A\) is square matrix. As a result, \(d+1\) can be shattered so that break point \(k\) is larger than or equal to \(d+2\).
+\begin{equation*}
+k=d_{VC}+1\geq d+2\implies d_{VC}\geq d+1
+\end{equation*}
+
+ (b) To show that \(d_{VC}\leq d+1\), show that no set of $d+2$ points in \(X\) can be shattered by the perceptron.
+Let a row of \(A\) represents a point in \(X\). Then \((d+2)\times(d+1)\) represents \(d+2\) points in \(X\). Since \(d+2\) points cannot be linearly independent in \(X\), we cannot find \(Aw=p\) for all \(p\) such that no set of \(d+2\) points in \(X\) can be shattered.
+\(d_{VC}\leq d+1\).
