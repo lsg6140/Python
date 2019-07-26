@@ -479,20 +479,14 @@ where
   def optimal_step_size(Y,Y_next,yhat,J,dk,mu_a,Q,n,N):
       beta = np.zeros(4)
       for i in range(N):  
-          # Jdk = np.matmul(J[i],dk)
-          Jdk = J[i]@dk
+          Jdk = J[i] @ dk
           dy = yhat[:,i]-Y[:,i]
           r = (Y_next[:,i]-Y[:,i]-mu_a*Jdk)/mu_a**2
-          # rQ = np.matmul(r,Q)
-          rQ = r@Q
-          # beta[0] += 2*np.matmul(rQ,r)
-          beta[0] += 2*rQ@r
-          # beta[1] += 3*np.matmul(rQ,Jdk)
-          beta[1] += 3*rQ@Jdk
-          # beta[2] += np.matmul(np.matmul(Jdk.transpose(),Q),Jdk)-2*np.matmul(rQ,dy)
-          beta[2] += Jdk.transpose()@Q@Jdk-2*rQ@dy
-          # beta[3] += -np.matmul(np.matmul(Jdk.transpose(),Q),dy)
-          beta[3] += -Jdk.transpose()@Q@dy
+          rQ = r @ Q
+          beta[0] += 2*rQ @ r
+          beta[1] += 3*rQ @ Jdk
+          beta[2] += Jdk.T @ Q @ Jdk-2*rQ @ dy
+          beta[3] += -Jdk.T @ Q @ dy
       mu_opt = np.roots(beta)
       return mu_opt
 #+end_src
