@@ -129,11 +129,11 @@ for solving the linear equation
 ** Construction of differential equations system
 The sensitivity matrix is
 \begin{equation*}
-\mathbf{J}(t)=\frac{\partial\mathbf{y}}{\partial\mathbf{k}}=\left[\frac{\partial\mathbf{y}}{\partial k_1},\cdots,\frac{\partial\mathbf{y}}{\partial k_p}\right]=[\mathbf{j}_1,\cdots,\mathbf{j}_p]
+\mathbf{J}(t)=\frac{\partial\mathbf{y}}{\partial\mathbf{k}}=\left[\frac{\partial\mathbf{y}}{\partial k_1},\cdots,\frac{\partial\mathbf{y}}{\partial k_p}\right]=[\mathbf{g}_1,\cdots,\mathbf{g}_p]
 \end{equation*}
-where \(\mathbf{j}_i\) represents \(n\)-dimensional vector which is the sensitivity coefficients of the state variables with respect to parameter $k_i$. Each of $\mathbf{j}_i$ satisfies the differential equation for sensitivity matrix such that
+where \(\mathbf{g}_i\) represents \(n\)-dimensional vector which is the sensitivity coefficients of the state variables with respect to parameter $k_i$. Each of $\mathbf{g}_i$ satisfies the differential equation for sensitivity matrix such that
 \begin{equation*}
-\frac{d\mathbf{j}_i(t)}{dt}=\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{j}_i+\frac{\partial\mathbf{f}}{\partial k_i};~~\mathbf{j}_p(t_0)=0;~~i=1,\cdots,p
+\frac{d\mathbf{g}_i(t)}{dt}=\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{g}_i+\frac{\partial\mathbf{f}}{\partial k_i};~~\mathbf{g}_p(t_0)=0;~~i=1,\cdots,p
 \end{equation*}
 We generate \(n\times(p+1)\)-dimensional differential equations system
 \begin{equation*}
@@ -147,9 +147,9 @@ $\mathbf{z}$ is \(n\times(p+1)\)-dimensional vector
                           \frac{\partial\mathbf{y}}{\partial k_p}
 \end{bmatrix}
 =\begin{bmatrix} \mathbf{y}(t)\\
-                 \mathbf{j}_1(t)\\
+                 \mathbf{g}_1(t)\\
                  \vdots\\
-                 \mathbf{j}_p(t)
+                 \mathbf{g}_p(t)
 \end{bmatrix}
 \end{equation*}
 $\mathbf{\varphi}(\mathbf{z})$ is \(n\times(p+1)\)-dimensional vector function
@@ -157,22 +157,13 @@ $\mathbf{\varphi}(\mathbf{z})$ is \(n\times(p+1)\)-dimensional vector function
 \begin{equation*}
 \mathbf{\varphi}(\mathbf{z})=\begin{bmatrix}
 \mathbf{f}(\mathbf{y},\mathbf{k})\\
-\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{j}_1(t)+\frac{\partial\mathbf{f}}{\partial k_1}\\
+\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{g}_1(t)+\frac{\partial\mathbf{f}}{\partial k_1}\\
 \vdots\\
-\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{j}_p(t)+\frac{\partial\mathbf{f}}{\partial k_p}
+\frac{\partial\mathbf{f}}{\partial\mathbf{y}}\mathbf{g}_p(t)+\frac{\partial\mathbf{f}}{\partial k_p}
 \end{bmatrix}
 \end{equation*}
 
-To get the Jacobian for all $t_i$, \(\varphi(\mathbf{z}_i)\) should be constructed for all \(t_i,~~i=1,2,\cdots,N\).
-
-Example of \(\partial f/\partial y\) for \(n=2\) is
-\begin{equation*}
-\frac{\partial f}{\partial y}=\begin{bmatrix}
-\frac{\partial f_1}{\partial y_1} & \frac{\partial f_1}{\partial y_2}\\
-\frac{\partial f_2}{\partial y_1} & \frac{\partial f_2}{\partial y_2}\end{bmatrix}=\begin{bmatrix}
-\frac{f_1(y_1+h,y_2)-f_1(y_1-h,y_2)}{2h} & \frac{f_1(y_1,y_2+h)-f_1(y_1,y_2-h)}{2h}\\
-\frac{f_2(y_1+h,y_2)-f_2(y_1-h,y_2)}{2h} & \frac{f_2(y_1,y_2+h)-f_2(y_1,y_2-h)}{2h}\end{bmatrix}
-\end{equation*}
+To get the Jacobian for all $t_i$, \(\varphi(\mathbf{z}_i)\) should be solved for \(t_i,~~i=1,2,\cdots,N\).
 
 #+name: dfdy
 #+begin_src python :session gnode :exports code :tangle yes
@@ -222,7 +213,7 @@ Example of \(\partial f/\partial y\) for \(n=2\) is
       phiz = np.empty(n*(p+1))
       dfdy = dfdy_ode(func,y,k,n)
       dfdk = dfdk_ode(func,y,k,n,p)
-      dJdt = np.matmul(dfdy,J)+dfdk
+      dJdt = dfdy@J+dfdk
       phiz[0:n] = func(y,k)
       phiz[n:] = dJdt.transpose().flatten()
       return phiz
@@ -232,15 +223,15 @@ The sensitivity matrix \(\textbf{J}\) is obtained by integration of \(\varphi(z)
 \begin{equation*}
 \textbf{z}=\begin{bmatrix}
 \textbf{y}\\
-\textbf{j}_1\\
-\textbf{j}_2\\
+\textbf{g}_1\\
+\textbf{g}_2\\
 \vdots\\
-\textbf{j}_p
+\textbf{g}_p
 \end{bmatrix}
 \end{equation*}
 where
 \begin{equation*}
-\textbf{j}_i=\begin{bmatrix}
+\textbf{g}_i=\begin{bmatrix}
 \frac{\partial y_1}{\partial k_i}\\
 \frac{\partial y_2}{\partial k_i}\\
 \vdots\\
@@ -250,7 +241,7 @@ where
 The sensitivity or Jacobian matrix \(\textbf{J}\) is
 \begin{equation*}
 \textbf{J}=\begin{bmatrix}
-\textbf{j}_1,\textbf{j}_2,\cdots,\textbf{j}_p
+\textbf{g}_1,\textbf{g}_2,\cdots,\textbf{g}_p
 \end{bmatrix}
 \end{equation*}
 To compute the \(\textbf{A}\) matrix
@@ -262,9 +253,9 @@ The ODE solver for initial value problem returns \([n\times(p+1)]\times N\) matr
 \begin{matrix*}
 Z=\begin{bmatrix}
 y(t_1)&y(t_2)&\cdots&y(t_N)\\
-j_1(t_1)&j_1(t_2)&\cdots&y_1(t_N)\\
+g_1(t_1)&g_1(t_2)&\cdots&g_1(t_N)\\
 \vdots&&\ddots&\vdots\\
-j_p(t_1)&j_p(t_2)&\cdots&y_p(t_N)
+g_p(t_1)&g_p(t_2)&\cdots&g_p(t_N)
 \end{bmatrix}
 \end{matrix*}
 This matrix would be refomulated for
@@ -276,20 +267,17 @@ y(t_1)&y(t_2)&\cdots&y(t_N)
 and
 \begin{equation*}
 \textbf{J}t_i=\begin{bmatrix}
-\textbf{j}_1(t_1)&\textbf{j}_2(t_1)&\cdots&\textbf{j}_p(t_1)
+\textbf{g}_1(t_1)&\textbf{g}_2(t_1)&\cdots&\textbf{g}_p(t_1)
 \end{bmatrix}
 ,\hdots,\begin{bmatrix}
-\textbf{j}_1(t_N)&\textbf{j}_2(t_N)&\cdots&\textbf{j}_p(t_N)
+\textbf{g}_1(t_N)&\textbf{g}_2(t_N)&\cdots&\textbf{g}_p(t_N)
 \end{bmatrix}
 \end{equation*}
 
 #+name: ODE solving
-#+begin_src python :session gnode :exports code :tangle yes
+#+begin_src python :session gnode :exports code :results none :tangle yes
   def state_jacob_int(func,y0,k,time):
-      if np.isscalar(y0):
-          n = 1
-      else:
-          n = np.size(y0)
+      n = np.size(y0)
       p = np.size(k)
       N = np.size(time)
       # initial condition J0 = 0
@@ -298,26 +286,21 @@ and
       def dzdt(t,z):
           return phi_z(func,z,k,n,p)
       solution = solve_ivp(dzdt,[time[0],time[-1]],z0,method='Radau',t_eval=time)
+      if solution.success == False:
+          raise OverflowError("Integration by state_jacob_int failed")
       Z = solution.y
       Y = Z[0:n]
       J = Z[n:]
       Jt_i = np.hsplit(J,N)
       for i in range(N):
           Jt_i[i] = Jt_i[i].reshape(p,n).transpose()
-      return Y,Jt_i
+      return Y,Jt_i,solution.success
 
   def state_only_int(func,y0,k,time):
-      if np.isscalar(y0):
-          def dydt(y,t):
-              return func(y,k)
-          solution = odeint(dydt,y0,time)
-          return solution.transpose()
-      else:
-          def dydt(t,y):
-              return func(y,k)
-          solution = solve_ivp(dydt,[time[0],time[-1]],y0,method='Radau',t_eval=time)
-          return solution.y
-      return
+      def dydt(t,y):
+          return func(y,k)
+      solution = solve_ivp(dydt,[time[0],time[-1]],y0,method='Radau',t_eval=time)
+      return solution.y,solution.success
 #+end_src
 
 ** Construction of A and b and solve for \(\Delta k\).
@@ -381,21 +364,22 @@ where \(\mathbf{J}_i=\frac{\partial\mathbf{y}(t_i)}{\partial\mathbf{k}}\).
 #+name: Delta k
 #+begin_src python :session gnode :exports code :tangle yes
   def delta_k(J,Q,yhat,Y,p,N):
+      if np.shape(yhat) != np.shape(Y):
+          raise ValueError('size mismatch of yhat and Y')
       Hessian = np.zeros((p,p))
       gradient = np.zeros(p)
-      # Check whether y is scalar
-      if np.size(Q) == 1:
-          print('solve for scalar y')
-          for i in range(N):
-              Hessian += np.matmul(J[i].transpose(),J[i])
-              gradient += np.dot(J[i].transpose(),yhat[i]-Y[:,i])
-      else:
-          print('solve for vector y')
-          for i in range(N):
-              JQ = np.matmul(J[i].transpose(),Q)
-              Hessian += np.matmul(JQ,J[i])
-              gradient += np.dot(JQ,yhat[:,i]-Y[:,i])
-      del_k = np.linalg.solve(Hessian,gradient)
+      for i in range(N):
+          JQ = J[i].T@Q
+          Hessian += JQ@J[i]
+          gradient += JQ@(yhat[:,i]-Y[:,i])
+      # solve using singluar value decomposition
+      def svdsolve(a,b):
+          u,s,v = np.linalg.svd(a)
+          c = u.T@b
+          w = np.linalg.solve(np.diag(s),c)
+          x = v.T@w
+          return x
+      del_k = svdsolve(Hessian,gradient)
       return del_k
 #+end_src
 
@@ -406,7 +390,7 @@ where \(\mathbf{J}_i=\frac{\partial\mathbf{y}(t_i)}{\partial\mathbf{k}}\).
    2) Halve $\mu$ if step 1) is not satisfied.
 The objective function is
 \begin{equation*}
-S(\mathbf{k})=\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]^\top\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]
+\chi(\mathbf{k})=\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]^\top\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]
 \end{equation*}
 
 
@@ -418,28 +402,97 @@ S(\mathbf{k})=\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]^\top\m
           S = np.sum(diff**2)
       else:
           for i in range(N):
-              S += np.dot(np.matmul(diff[:,i],Q),diff[:,i])
+              # S += np.dot(np.matmul(diff[:,i],Q),diff[:,i])
+              S += diff[:,i]@Q@diff[:,i]
       return S
 
   def bisect(func,yhat,Q,k,time,iter_max):
       # check whether y is 1-dimensional
-      if np.size(yhat) == np.size(yhat,0):
-          y0 = yhat[0]
-          N = np.size(yhat)
-      else:
-          y0 = yhat[:,0]
-          N = np.size(yhat,1)
-      p = np.size(k)
-      Y,J = state_jacob_int(func,y0,k,time)
-      dk = delta_k(J,Q,yhat,Y,p,N)
-      mu = 1.0
-      S0 = chi_squared(yhat,Y,Q,N)
-      for j in range(iter_max):
-          k_temp = k + mu * dk
-          Y_temp = state_only_int(func,y0,k_temp,time)
-          S = chi_squared(yhat,Y_temp,Q,N)
-          if S < S0:
-              break
-          mu /= 2
-      return k_temp,Y,J
+      try:
+          if np.size(yhat) == np.size(yhat,0):
+              y0 = yhat[0]
+              N = np.size(yhat)
+          else:
+              y0 = yhat[:,0]
+              N = np.size(yhat,1)
+          p = np.size(k)
+          Y,J,suc = state_jacob_int(func,y0,k,time)
+          dk = delta_k(J,Q,yhat,Y,p,N)
+          mu = 1.0
+          S0 = chi_squared(yhat,Y,Q,N)
+          for j in range(iter_max):
+              k_next = k + mu * dk
+              Y_next,fos = state_only_int(func,y0,k_next,time)
+              if fos == False:
+                  mu /= 2
+              else:
+                  S = chi_squared(yhat,Y_next,Q,N)
+                  if S < S0:
+                      break
+                  mu /= 2
+          return Y,Y_next,J,dk,mu
+      except OverflowError:
+          print("Problem with integration. Try with another parameter")
+          return
+#+end_src
+
+** Optimal step-size policy
+The Taylor series of the state vector with respect to \(\mu\) is
+\begin{equation*}
+\mathbf{y}(t,\mathbf{k}^{(j)}+\mu\Delta\mathbf{k}^{(j+1)})=\mathbf{y}(t,\mathbf{k}^{(j)})+\mu\mathbf{J}(t)\Delta\mathbf{k}^{(j+1)}+\frac{1}{2}\mu^2\mathbf{H}(\Delta\mathbf{k}^{(j+1)},\Delta\mathbf{k}^{(j+1)})
+\end{equation*}
+where \(\mathbf{H}\) is a bilinear operator. Alternatively in tensor form with Einstein convention,
+\begin{equation*}
+y_i(t,\mathbf{k}^{(j)}+\mu\Delta\mathbf{k}^{(j+1)})=y_i(t,\mathbf{k}^{(j)})+\mu J_{ij}(t)\Delta k_j+\frac{1}{2}\mu^2H_{ijk}(t)\Delta k_j\Delta k_k
+\end{equation*}
+where \(J_{ij}=\frac{\partial y_i}{\partial k_j}\) and \(H_{ijk}=\frac{\partial^2y_i}{\partial k_j\partial k_k}\).
+Taylor series for \(\mu_a\) with known \(\mathbf{y}(t,\mathbf{k}^{(j+1)}),\mathbf{y}(t,\mathbf{k}^{(j)})\) is
+\begin{equation*}
+\mathbf{y}(t,\mathbf{k}^{(j)}+\mu_a\Delta\mathbf{k}^{(j+1)})=\mathbf{y}(t,\mathbf{k}^{(j)})+\mu_a\mathbf{J}\Delta\mathbf{k}^{(j+1)}+\mu_a^2\mathbf{r}(t)
+\end{equation*}
+so that
+\begin{equation*}
+\mathbf{r}(t)=\frac{1}{\mu_a^2}\left(\mathbf{y}(t,\mathbf{k}^{(j)}+\mu_a\Delta\mathbf{k}^{(j+1)})-\mathbf{y}(t,\mathbf{k}^{(j)})-\mu_a\mathbf{J}(t)\Delta\mathbf{k}^{(j+1)}\right)
+\end{equation*}
+With this remainder vector \(\mathbf{r}(t)\) as the approximation of second order term in Taylor series, the objective funcion
+\begin{equation*}
+\chi(\mathbf{k})=\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]^\top\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})]
+\end{equation*}
+becomes
+\begin{equation*}
+\chi(\mu)=\sum_{i=1}^N[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k}^{(j)})-\mu\mathbf{J}(t_i)\Delta\mathbf{k}^{(j+1)}-\mu^2\mathbf{r}(t_i)]^\top\mathbf{Q}_i[\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k}^{(j)})-\mu\mathbf{J}(t_i)\Delta\mathbf{k}^{(j+1)}-\mu^2\mathbf{r}(t_i)]
+\end{equation*}
+Applying the stationary criterion \(\partial\chi/\partial\mu=0\) yields
+\begin{equation*}
+\beta_0\mu^3+\beta_1\mu^2+\beta_2\mu+\beta_3=0
+\end{equation*}
+where
+\begin{align*}
+\beta_0=&2\sum_{i=1}^N\mathbf{r}(t_i)^\top\mathbf{Q}_i\mathbf{r}(t_i)\\
+\beta_1=&3\sum_{i=1}^N\mathbf{r}(t_i)^\top\mathbf{Q}_i\mathbf{J}(t_i)\Delta\mathbf{k}^{(j+1)}\\
+\beta_2=&\sum_{i=1}^N\left[\Delta\mathbf{k}^{(j+1)}^\top\mathbf{J}(t_i)^\top\mathbf{Q}_i\mathbf{J}(t_i)\Delta\mathbf{k}^{(j+1)}-2\mathbf{r}(t_i)^\top\mathbf{Q}_i[\hat{\mathbf{y}}(t_i)-\mathbf{y}(t_i,\mathbf{k}^{(j)})]\right]\\
+\beta_3=&-\sum_{i=1}^N\Delta\mathbf{k}^{(j+1)}\mathbf{J}(t_i)^\top\mathbf{Q}_i[\hat{\mathbf{y}}(t_i)-\mathbf{y}(t_i,\mathbf{k}^{(j)})]
+\end{align*}
+
+#+name: optimal step-size
+#+begin_src python :session gnode :results none :exports code :tangle yes
+  def optimal_step_size(Y,Y_next,yhat,J,dk,mu_a,Q,n,N):
+      beta = np.zeros(4)
+      for i in range(N):  
+          # Jdk = np.matmul(J[i],dk)
+          Jdk = J[i]@dk
+          dy = yhat[:,i]-Y[:,i]
+          r = (Y_next[:,i]-Y[:,i]-mu_a*Jdk)/mu_a**2
+          # rQ = np.matmul(r,Q)
+          rQ = r@Q
+          # beta[0] += 2*np.matmul(rQ,r)
+          beta[0] += 2*rQ@r
+          # beta[1] += 3*np.matmul(rQ,Jdk)
+          beta[1] += 3*rQ@Jdk
+          # beta[2] += np.matmul(np.matmul(Jdk.transpose(),Q),Jdk)-2*np.matmul(rQ,dy)
+          beta[2] += Jdk.transpose()@Q@Jdk-2*rQ@dy
+          # beta[3] += -np.matmul(np.matmul(Jdk.transpose(),Q),dy)
+          beta[3] += -Jdk.transpose()@Q@dy
+      mu_opt = np.roots(beta)
+      return mu_opt
 #+end_src
