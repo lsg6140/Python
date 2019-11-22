@@ -14,3 +14,5 @@ images/*
 .ipynb*
 Untitled*
 __pycache__
+PBM/pe_ode.pdf
+PBM/pe_ode.tex

@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import linalg as LA
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp, odeint
 
@@ -13,12 +14,12 @@ def Sg_ode(ode,yhat,Q,k,time):
             N = np.size(yhat,1)
 
         p = np.size(k)
-        Y,J,info = state_jacob_int(ode,y0,k,time)
-        S,diff = objective_func(yhat,Y,Q,N)
+        Y,J = state_jacob_int(ode,y0,k,time)
+        S,r = objective_func(yhat,Y,Q,N)
         # calculation of S' = g
         g = np.zeros(p)
         for i in range(N):
-            g -= J[i].T@Q@diff[:,i]
+            g -= J[i].T@Q@r[:,i]
         return S, g
     except OverflowError:
         print("Problem with integration. Try with another parameters")
@@ -34,9 +35,6 @@ def interpolate(a,b,phia,phib,dphia,n):
     else:
         alpha = (a+b)/2
     return alpha
-
-def checkfgH(func,y,k):
-    return func(y,k)
 
 def dfdy_ode(ode,y,k,n):
     h = 1e-8
@@ -101,7 +99,7 @@ def state_jacob_int(ode,y0,k,time):
     Jt_i = np.hsplit(J,N)
     for i in range(N):
         Jt_i[i] = Jt_i[i].reshape(p,n).transpose()
-    return Y,Jt_i,solution.success
+    return Y,Jt_i
 
 def state_only_int(ode,y0,k,time):
     def dydt(t,y):
@@ -120,50 +118,99 @@ def delta_k(J,Q,yhat,Y,p,N):
         gradient += JQ@(yhat[:,i]-Y[:,i])
     # solve using singluar value decomposition
     def svdsolve(a,b):
-        u,s,v = np.linalg.svd(a)
+        u,s,v = LA.svd(a)
         c = u.T@b
-        w = np.linalg.solve(np.diag(s),c)
+        w = LA.solve(np.diag(s),c)
         x = v.T@w
         return x
     del_k = svdsolve(Hessian,gradient)
     return del_k
 
-def objective_func(yhat,Y,Q,N):
-    S = 0
-    diff = yhat-Y
-    if np.size(Q) == 1:
-        S = np.sum(diff**2)
-    else:
-        for i in range(N):
-            # S += np.dot(np.matmul(diff[:,i],Q),diff[:,i])
-            S += diff[:,i]@Q@diff[:,i]
-    return S, diff
+def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-4,1e-8,100,1000]):
+    # Input arguments
 
-def bisect(ode,yhat,Q,k,time,iter_max):
-    # check whether y is 1-dimensional
+    # opts = [tau, tolg, tolk, max_eval, max_iter]
+    #
+    # Outputs
+    # output = [k,Y,info]
+    # k : parameters
+    # Y : results with k
+    # info = [eval, iter]
+
     try:
+        stop = False
+        nu = 2
+        eval = 0
+        iter = 0
         if np.size(yhat) == np.size(yhat,0):
             y0 = yhat[0]
             N = np.size(yhat)
         else:
             y0 = yhat[:,0]
             N = np.size(yhat,1)
-        p = np.size(k)
-        Y,J,suc = state_jacob_int(ode,y0,k,time)
-        dk = delta_k(J,Q,yhat,Y,p,N)
-        mu = 1.0
-        S0 = objective_func(yhat,Y,Q,N)
-        for j in range(iter_max):
-            k_next = k + mu * dk
-            Y_next,fos = state_only_int(ode,y0,k_next,time)
-            if fos == False:
-                mu /= 2
+        print('y0 is')
+        print(y0)
+        p = np.size(k0)
+        I = np.eye(p)
+        k = k0
+        Y, J = state_jacob_int(ode,y0,k,time)
+        S, r = objective_func(yhat,Y,Q,N)
+        eval += 1
+        S0 = S
+        H,g = Hg(J,Q,r,p,N)
+        stop = bool(LA.norm(g,np.inf) < opts[1])
+        mu = opts[0]*max(np.diag(H))
+        while not stop and eval <= opts[3] and iter<=opts[4]:
+            iter += 1
+            h = svdsolve(H+mu*I,-g)
+            if LA.norm(h,np.inf) <= opts[2]*(LA.norm(k,np.inf)+opts[2]):
+                stop = True
             else:
-                S = objective_func(yhat,Y_next,Q,N)
-                if S < S0:
-                    break
-                mu /= 2
-        return Y,Y_next,J,dk,mu
+                k_new = k + h
+                Y, J = state_jacob_int(ode,y0,k_new,time)
+                eval += 1
+                S, r = objective_func(yhat,Y,Q,N)
+                rho = (S0 - S) / (h.T@(-g+mu*h)/2)
+                if rho >0:
+                    k = k_new
+                    S0 = S
+                    H, g = Hg(J,Q,r,p,N)
+                    stop = bool(LA.norm(g,np.inf) < opts[1])
+                    mu *= max(1/3,1-(2*rho-1)**3)
+                    nu = 2
+                else:
+                    mu *= nu
+                    nu *= 2
+        info = [eval,iter]
+        output = [k,Y,info]
+        return output
     except OverflowError:
         print("Problem with integration. Try with another parameter")
         return
+
+def objective_func(yhat,Y,Q,N):
+    S = 0
+    r = yhat-Y
+    if np.size(Q) == 1:
+        S = np.sum(r**2)
+    else:
+        for i in range(N):
+            # S += np.dot(np.matmul(r[:,i],Q),r[:,i])
+            S += r[:,i]@Q@r[:,i]
+    return S, r
+
+def Hg(J,Q,r,p,N):
+    H = np.zeros((p,p))
+    g = np.zeros(p)
+    for i in range(N):
+        JQ = J[i].T@Q
+        H += JQ@J[i]
+        g -= JQ@r[:,i]
+    return H,g
+
+def svdsolve(A,b):
+    u,s,v = np.linalg.svd(A)
+    c = u.T@b
+    w = np.linalg.solve(np.diag(s),c)
+    x = v.T@w
+    return x
