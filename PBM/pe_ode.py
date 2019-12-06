@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp, odeint
 
 def Sg_ode(ode,yhat,Q,k,time):
-    # check whether y is vector or matrix
+    # check whether y is a scalar or a vector
     try:
         if np.size(yhat) == np.size(yhat,0):
             y0 = yhat[0]
@@ -25,17 +25,6 @@ def Sg_ode(ode,yhat,Q,k,time):
         print("Problem with integration. Try with another parameters")
         return
 
-def interpolate(a,b,phia,phib,dphia,n):
-    d = b-a
-    c = (phib-phia-d*dphia)/d**2
-    if c>=5*n*np.eps*b:
-        alpha = a-dphia/(2*c)
-        d = 0.1*d
-        alpha = min(max(alpha,a+d),b-d)
-    else:
-        alpha = (a+b)/2
-    return alpha
-
 def dfdy_ode(ode,y,k,n):
     h = 1e-8
     y = y.astype(np.float)
@@ -55,11 +44,11 @@ def dfdy_ode(ode,y,k,n):
 
 def dfdk_ode(ode,y,k,n,p):
     h = 1e-8
-    k = k.astype(np.float)
     if p == 1:
         dfdk = (ode(y,k+h)-ode(y,k-h))/(2*h)
-        return dfdk
+        return dfdk.reshape(n,1)
     else:
+        k = k.astype(np.float)
         dfdk = np.empty((p,n))
         for i in range(p):
             kr = k.copy()
@@ -126,7 +115,7 @@ def delta_k(J,Q,yhat,Y,p,N):
     del_k = svdsolve(Hessian,gradient)
     return del_k
 
-def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-4,1e-8,100,1000]):
+def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-6,1e-8,100,1000]):
     # Input arguments
 
     # opts = [tau, tolg, tolk, max_eval, max_iter]
@@ -140,48 +129,58 @@ def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-4,1e-8,100,1000]):
     try:
         stop = False
         nu = 2
-        eval = 0
-        iter = 0
+        Ev = 0    # number of function evalution
+        It = 0    # number of iteration
         if np.size(yhat) == np.size(yhat,0):
             y0 = yhat[0]
             N = np.size(yhat)
         else:
             y0 = yhat[:,0]
             N = np.size(yhat,1)
-        print('y0 is')
-        print(y0)
         p = np.size(k0)
         I = np.eye(p)
         k = k0
+        print('Iteration | Evaluation | Objective function | Reduced gradient | mu')
         Y, J = state_jacob_int(ode,y0,k,time)
         S, r = objective_func(yhat,Y,Q,N)
-        eval += 1
+        Ev += 1
         S0 = S
         H,g = Hg(J,Q,r,p,N)
-        stop = bool(LA.norm(g,np.inf) < opts[1])
+        K = np.diag(k)
+        Hr = K@H@K
+        gr = K@g
+        gn = LA.norm(gr,np.inf)
+        stop = bool(gn < opts[1])
         mu = opts[0]*max(np.diag(H))
-        while not stop and eval <= opts[3] and iter<=opts[4]:
-            iter += 1
-            h = svdsolve(H+mu*I,-g)
+        print("{0:10d}|{1:12d}|{2:20.4e}|{3:18.2e}|{4:5.1e}".format(It,Ev,S,gn,mu))
+        while (not stop) and (Ev <= opts[3]) and (It<=opts[4]):
+            It += 1
+            hr = svdsolve(Hr+mu*I,-gr)
+            h = K@hr
             if LA.norm(h,np.inf) <= opts[2]*(LA.norm(k,np.inf)+opts[2]):
                 stop = True
             else:
                 k_new = k + h
                 Y, J = state_jacob_int(ode,y0,k_new,time)
-                eval += 1
+                Ev += 1
                 S, r = objective_func(yhat,Y,Q,N)
                 rho = (S0 - S) / (h.T@(-g+mu*h)/2)
                 if rho >0:
-                    k = k_new
+                    k = k_new 
+                    K = np.diag(k)
                     S0 = S
                     H, g = Hg(J,Q,r,p,N)
-                    stop = bool(LA.norm(g,np.inf) < opts[1])
+                    Hr = K@H@K
+                    gr = K@g
+                    gn = LA.norm(gr,np.inf) 
+                    stop = bool(gn < opts[1])
                     mu *= max(1/3,1-(2*rho-1)**3)
+                    print("{0:10d}|{1:12d}|{2:20.4e}|{3:18.2e}|{4:5.1e}".format(It,Ev,S,gn,mu))
                     nu = 2
                 else:
                     mu *= nu
                     nu *= 2
-        info = [eval,iter]
+        info = [Ev,It]
         output = [k,Y,info]
         return output
     except OverflowError:

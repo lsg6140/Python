@@ -147,7 +147,7 @@ Python source code for the calcuation of \(S(\mathbf{k}+\alpha\mathbf{h})\) and 
 #+name: S S'
 #+begin_src python :session peode :exports code :tangle yes
   def Sg_ode(ode,yhat,Q,k,time):
-      # check whether y is vector or matrix
+      # check whether y is a scalar or a vector
       try:
           if np.size(yhat) == np.size(yhat,0):
               y0 = yhat[0]
@@ -180,135 +180,6 @@ To ensure that \(\alpha\) is not to small, the second condition is that the loca
 \end{equation*}
 with \(\beta_1<\beta_2<1\).
 For soft line search, an interval \([a,b]\) is chosen so that it contains acceptable points. Then the interval is successively reduced. We find a point \(\alpha\) in the interval and accept \(\alpha\) as \(\alpha_s\) if it satisfies conditions above. Otherwise, we reduce the interval to \([a,\alpha]\) or \([\alpha,b]\).
-*** Algorithm of soft line search
-1. If \(\mathbf{S'(k)=0}\implies\varphi'(0)=0\), we do nothing.
-2. The initial choice \(a=0,b=1\) is used since \(\alpha=1\) is a good guess in the final steps of the iteration. The upper bound \(\alpha_{\text{max}}\) is supplied by the user.
-3. Update the interval to \(a=b,b=\max(2b,\alpha_{\text{max}})\) while the first condition is satisfied but the second condition is not satisfied.
-4. 1-3 set up the initial interval \([a,b]\) with the acceptalble \(\alpha\)-range.
-5. Refine \(\alpha\) and \([a,b]\) as follows
-6. The second order polynomial \(\psi(t)=\varphi(a)+\varphi'(a)(t-a)+c(t-a)^2\) satisfies \(\psi(a)=\varphi(a),~\psi'(a)=\varphi'(a)\), and \(\psi(b)=\varphi(b)\). If \(c>0\), then \(\psi\) has a minimum and we let \(\alpha\) be the minimizer. Otherwise \(\alpha\) is the midpoint of \([a,b]\).
-7. \(\alpha\) should be in the middle 80% of the interval.
-9. 
-
-*** Soft line search Python code
-#+name: slinesearch
-#+begin_src python :session peode :exports code :tangle no
-  def slinesearch(ode,yhat,Y,Q,k,time,S,g,h,opts=[1e-3,0.99,10,10]):
-      # Input arguments
-      # ode : input ODEs
-      # yhat : measured values
-      # Y : calculated value with the ODE integrator using k as parameters
-      # k : estimated parameters
-      # time : times at measurements
-      # S : objective function calculated with k
-      # g : gradient of objective function with k
-      # h : step vector
-      # opts : [beta_1, beta_2, max_eval, alpha_max]
-      # beta_1 : default 1e-3
-      # beta_2 : default 0.99
-      # max_eval : default 10
-      # alpha_max : default 10
-      #
-      # Outputs
-      # output : [[k,S,g],info]
-      # k : new parameters
-      # S : objective function with new parameters
-      # g : gradient of the objective function with new parameters
-      # info[0] > 0 : alpha_s. successful call
-      #         = 0 : h is not downhill
-      #         = -1 : failed call
-      # info[1] = slope ratio at the solution, phi'(alpha_s) / phi'(0)
-      # info[2] = number of function evaluations
-
-      info = np.array([0,1,0],dtype = float)
-      output = np.array([k,S,g],info)
-
-      # 1. S'(k) = 0
-      dphi0 = np.dot(h,g)
-      if dphi0 >= -10*np.eps*LA.norm(h)*LA.norm(g):
-          info[0] = 0
-          return output
-      # 1.
-
-      slope1 = opts[0] * dphi0
-      slope2 = opts[1] * dphi0
-
-      # 2.
-      a = 0, b = min(1,opts[3])
-      # 2.
-
-      # 3.
-      stop = False
-      S0 = S
-      while not stop:
-          stop, phib, g = Sg_ode(ode,yhat,Q,k+b*h,time)
-          info[2] += 1
-          if stop:
-              info[0] = 0
-          else:
-              dphib = np.dot(h,g)
-              if phib < S0 + slope1*b:
-                  info[0] = b
-                  info[1] = dphib / dphi0
-                  a = b, phia = phib, dphia = dphib
-                  k += b*h
-                  if dphib < min(slope2,0) and info[2] < opts[2]
-                  and b < opts[3]:
-                      if 2.5*b >= opts[3]:
-                          b = opts[3]
-                      else:
-                          b *= 2
-                  else:
-                      stop = True
-              else:
-                  stop = True
-      # 3.
-
-      if int(stop) >= 0:
-          stop = info[2] >= opts[2] or (b >= opts[3] and dphib < slope2)
-
-          or (a > 0 and dphib >= slope2)
-
-      # 6.
-      while not stop
-      :
-          c = interpolate(a,b,phia,phib,dphia,n)
-          stop, phic, g = Sg_ode(ode,yhat,Q,k+c*h,time)
-          info[2] += 1
-          if stop:
-              info[0] = 0
-          else:
-              dphic = np.dot(g,h)
-              if phic < S0 + slope1*c:
-                  info[0] = c
-                  info[1] = dphic/dphi0
-                  k += c*h
-                  S = phic
-                  a = c, phia = phic, dphia = dphic
-                  stop = dphic > slope2
-              else:
-                  b = c, phib = phic, dphib = dphic
-          stop = stop or info[2] >= opts[2]
-      # 6.
-
-      output = np.array([k,S,g],info)
-      return output
-#+end_src
-
-#+RESULTS: slinesearch
-
-#+begin_src python :session peode :exports code :tangle yes
-  def interpolate(a,b,phia,phib,dphia,n):
-      d = b-a
-      c = (phib-phia-d*dphia)/d**2
-      if c>=5*n*np.eps*b:
-          alpha = a-dphia/(2*c)
-          d = 0.1*d
-          alpha = min(max(alpha,a+d),b-d)
-      else:
-          alpha = (a+b)/2
-      return alpha
-#+end_src
 
 ** Gauss-Newton method
 With \(\mathbf{r}_i=\hat{\mathbf{y}}_i-\mathbf{y}(t_i,\mathbf{k})\), linear model of \(\mathbf{r}_i\) with Taylor expansion, \(\mathbf{l}_i\) is
@@ -496,11 +367,11 @@ To get the Jacobian for all $t_i$, \(\varphi(\mathbf{z}_i)\) should be solved fo
 #+begin_src python :session peode :exports code :tangle yes
   def dfdk_ode(ode,y,k,n,p):
       h = 1e-8
-      k = k.astype(np.float)
       if p == 1:
           dfdk = (ode(y,k+h)-ode(y,k-h))/(2*h)
-          return dfdk
+          return dfdk.reshape(n,1)
       else:
+          k = k.astype(np.float)
           dfdk = np.empty((p,n))
           for i in range(p):
               kr = k.copy()
@@ -733,7 +604,7 @@ where \(\mathbf{J}_i=\frac{\partial\mathbf{y}(t_i)}{\partial\mathbf{k}}\).
 
 #+name: Levenberg-Marquardt method
 #+begin_src python :session peode :exports code :tangle yes
-  def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-4,1e-8,100,1000]):
+  def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-6,1e-8,100,1000]):
       # Input arguments
 
       # opts = [tau, tolg, tolk, max_eval, max_iter]
@@ -747,48 +618,58 @@ where \(\mathbf{J}_i=\frac{\partial\mathbf{y}(t_i)}{\partial\mathbf{k}}\).
       try:
           stop = False
           nu = 2
-          eval = 0
-          iter = 0
+          Ev = 0    # number of function evalution
+          It = 0    # number of iteration
           if np.size(yhat) == np.size(yhat,0):
               y0 = yhat[0]
               N = np.size(yhat)
           else:
               y0 = yhat[:,0]
               N = np.size(yhat,1)
-          print('y0 is')
-          print(y0)
           p = np.size(k0)
           I = np.eye(p)
           k = k0
+          print('Iteration | Evaluation | Objective function | Reduced gradient | mu')
           Y, J = state_jacob_int(ode,y0,k,time)
           S, r = objective_func(yhat,Y,Q,N)
-          eval += 1
+          Ev += 1
           S0 = S
           H,g = Hg(J,Q,r,p,N)
-          stop = bool(LA.norm(g,np.inf) < opts[1])
+          K = np.diag(k)
+          Hr = K@H@K
+          gr = K@g
+          gn = LA.norm(gr,np.inf)
+          stop = bool(gn < opts[1])
           mu = opts[0]*max(np.diag(H))
-          while not stop and eval <= opts[3] and iter<=opts[4]:
-              iter += 1
-              h = svdsolve(H+mu*I,-g)
+          print("{0:10d}|{1:12d}|{2:20.4e}|{3:18.2e}|{4:5.1e}".format(It,Ev,S,gn,mu))
+          while (not stop) and (Ev <= opts[3]) and (It<=opts[4]):
+              It += 1
+              hr = svdsolve(Hr+mu*I,-gr)
+              h = K@hr
               if LA.norm(h,np.inf) <= opts[2]*(LA.norm(k,np.inf)+opts[2]):
                   stop = True
               else:
                   k_new = k + h
                   Y, J = state_jacob_int(ode,y0,k_new,time)
-                  eval += 1
+                  Ev += 1
                   S, r = objective_func(yhat,Y,Q,N)
                   rho = (S0 - S) / (h.T@(-g+mu*h)/2)
                   if rho >0:
-                      k = k_new
+                      k = k_new 
+                      K = np.diag(k)
                       S0 = S
                       H, g = Hg(J,Q,r,p,N)
-                      stop = bool(LA.norm(g,np.inf) < opts[1])
+                      Hr = K@H@K
+                      gr = K@g
+                      gn = LA.norm(gr,np.inf) 
+                      stop = bool(gn < opts[1])
                       mu *= max(1/3,1-(2*rho-1)**3)
+                      print("{0:10d}|{1:12d}|{2:20.4e}|{3:18.2e}|{4:5.1e}".format(It,Ev,S,gn,mu))
                       nu = 2
                   else:
                       mu *= nu
                       nu *= 2
-          info = [eval,iter]
+          info = [Ev,It]
           output = [k,Y,info]
           return output
       except OverflowError:
@@ -823,3 +704,5 @@ where \(\mathbf{J}_i=\frac{\partial\mathbf{y}(t_i)}{\partial\mathbf{k}}\).
       return x
 
 #+end_src
+
+#+RESULTS: Levenberg-Marquardt method
