@@ -115,22 +115,25 @@ def delta_k(J,Q,yhat,Y,p,N):
     del_k = svdsolve(Hessian,gradient)
     return del_k
 
-def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-6,1e-8,100,1000]):
+def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-8,1e-8,1000]):
     # Input arguments
 
-    # opts = [tau, tolg, tolk, max_eval, max_iter]
+    # opts = [tau, tolg, tolk, max_iter]
     #
     # Outputs
     # output = [k,Y,info]
     # k : parameters
     # Y : results with k
-    # info = [eval, iter]
+    # info = [it,ter]
+    # it : Number of iterations
+    # ter : Termination criteria 1: gradient 2: change in h 3: maximum iteration
 
     try:
         stop = False
         nu = 2
-        Ev = 0    # number of function evalution
-        It = 0    # number of iteration
+        it = 0  
+        rho = 0
+        ter = 'm'
         if np.size(yhat) == np.size(yhat,0):
             y0 = yhat[0]
             N = np.size(yhat)
@@ -140,47 +143,65 @@ def lm(ode,yhat,Q,k0,time,opts=[1e-3,1e-6,1e-8,100,1000]):
         p = np.size(k0)
         I = np.eye(p)
         k = k0
-        print('Iteration | Evaluation | Objective function | Reduced gradient | mu')
+        print('Iteration | Objective function | Reduced gradient |   mu   |   rho')
         Y, J = state_jacob_int(ode,y0,k,time)
         S, r = objective_func(yhat,Y,Q,N)
-        Ev += 1
         S0 = S
         H,g = Hg(J,Q,r,p,N)
+        print('g is')
+        print(g)
         K = np.diag(k)
         Hr = K@H@K
         gr = K@g
         gn = LA.norm(gr,np.inf)
         stop = bool(gn < opts[1])
-        mu = opts[0]*max(np.diag(H))
-        print("{0:10d}|{1:12d}|{2:20.4e}|{3:18.2e}|{4:5.1e}".format(It,Ev,S,gn,mu))
-        while (not stop) and (Ev <= opts[3]) and (It<=opts[4]):
-            It += 1
+        if stop:
+            ter = 'g'
+        mu = opts[0]*max(np.diag(Hr))
+        while (not stop) and (it<=opts[3]):
+            it += 1
             hr = svdsolve(Hr+mu*I,-gr)
             h = K@hr
-            if LA.norm(h,np.inf) <= opts[2]*(LA.norm(k,np.inf)+opts[2]):
+            hn = LA.norm(h,np.inf)
+            kn = LA.norm(k,np.inf)
+            if hn <= opts[2]*(kn+opts[2]):
                 stop = True
+                ter = 'h'
             else:
                 k_new = k + h
                 Y, J = state_jacob_int(ode,y0,k_new,time)
-                Ev += 1
                 S, r = objective_func(yhat,Y,Q,N)
-                rho = (S0 - S) / (h.T@(-g+mu*h)/2)
+                den = h.T@(mu*h-g)/2
+                print(*['L0 - L is ',den])
+                rho = (S0 - S)/den
                 if rho >0:
                     k = k_new 
                     K = np.diag(k)
                     S0 = S
+                    print('S0 is ')
+                    print(S0)
                     H, g = Hg(J,Q,r,p,N)
+                    print('g is')
+                    print(g)
                     Hr = K@H@K
                     gr = K@g
                     gn = LA.norm(gr,np.inf) 
-                    stop = bool(gn < opts[1])
+                    if gn < opts[1]:
+                        stop = True
+                        ter = 'g'
                     mu *= max(1/3,1-(2*rho-1)**3)
-                    print("{0:10d}|{1:12d}|{2:20.4e}|{3:18.2e}|{4:5.1e}".format(It,Ev,S,gn,mu))
                     nu = 2
                 else:
                     mu *= nu
                     nu *= 2
-        info = [Ev,It]
+            if rho == 0:
+                print("{0:10d}|{1:20.4e}|{2:18.2e}|{3:8.1e}| Not calculated"
+                      .format(it,S,gn,mu))
+            else:
+                print("{0:10d}|{1:20.4e}|{2:18.2e}|{3:8.1e}|{4:8.1e}"
+                      .format(it,S,gn,mu,rho))
+            print('Iter end\n\n\n')
+        info = [it,ter]
         output = [k,Y,info]
         return output
     except OverflowError:
